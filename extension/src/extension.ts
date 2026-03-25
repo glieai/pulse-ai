@@ -11,7 +11,6 @@ import { registerRefreshCommand } from "./commands/refresh";
 import { registerSearchCommand } from "./commands/search";
 import { detectRepoFromGit, onConfigChange, resolveConfig } from "./config";
 import { registerModelChangeListener } from "./llm/vscode-lm";
-import { ensureGlobalMcp } from "./mcp-setup";
 import { PulseCodeLensProvider } from "./providers/codelens";
 import { DraftsTreeProvider } from "./providers/drafts-tree";
 import { RecentTreeProvider } from "./providers/recent-tree";
@@ -44,9 +43,6 @@ export function activate(context: vscode.ExtensionContext): void {
 	}
 
 	client = new PulseApiClient(config.apiUrl, config.token);
-
-	// Auto-configure MCP for Claude Code / Codex (local + global)
-	ensureGlobalMcp(config.apiUrl, config.token, cwd);
 
 	// Tree providers
 	searchTree = new SearchTreeProvider(client);
@@ -160,7 +156,6 @@ export function activate(context: vscode.ExtensionContext): void {
 				if (gitRepo) newConfig.repo = gitRepo;
 			}
 			client?.configure(newConfig.apiUrl, newConfig.token);
-			ensureGlobalMcp(newConfig.apiUrl, newConfig.token, newCwd);
 			if (client) {
 				searchTree?.updateClient(client);
 				recentTree?.updateClient(client, newConfig.repo);
