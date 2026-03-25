@@ -1,4 +1,4 @@
-import { deleteDraft, listAllDraftRepos, listDrafts } from "@pulse/shared";
+import { listDrafts } from "@pulse/shared";
 import type { LocalDraft } from "@pulse/shared";
 import * as vscode from "vscode";
 

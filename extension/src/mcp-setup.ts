@@ -24,15 +24,9 @@ interface McpConfig {
 	mcpServers: Record<string, McpServerEntry>;
 }
 
-interface SettingsJson {
-	env?: Record<string, string>;
-	[key: string]: unknown;
-}
-
 const HOME = homedir();
 const CLAUDE_DIR = join(HOME, ".claude");
 const MCP_JSON_PATH = join(CLAUDE_DIR, ".mcp.json");
-const SETTINGS_JSON_PATH = join(CLAUDE_DIR, "settings.json");
 const CODEX_DIR = join(HOME, ".codex");
 const CODEX_CONFIG_PATH = join(CODEX_DIR, "config.toml");
 
