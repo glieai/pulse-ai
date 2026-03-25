@@ -3,14 +3,11 @@ import {
 	type PulseConfig,
 	configExists,
 	defaults,
-	getConfigPath,
 	isSoloMode,
 	saveConfig,
 } from "../config";
-import { detectCredentials } from "../credentials";
-import { ApiError, apiPost } from "../http";
-import { banner, c, error, info, success, warn } from "../output";
-import { ask, askPassword, closePrompt, confirm } from "../prompt";
+import { banner, c, error, info, success } from "../output";
+import { ask, closePrompt, confirm } from "../prompt";
 import { installGitHooks } from "../watcher/hooks";
 import { setupGlobalMcp } from "./setup-mcp";
 
@@ -61,36 +58,10 @@ export async function initCommand(_args: string[]): Promise<void> {
 		success("Token accepted");
 	}
 
-	// 5. Detect repo (silent — don't ask, just detect)
+	// 5. Detect repo silently
 	const repo = detectGitRemote() ?? "";
 
-	// 6. LLM detection
-	const report = detectCredentials();
-
-	if (report.anthropic.available) {
-		if (report.anthropic.source === "claude-cli") {
-			success("Claude Code CLI detected — uses your subscription (zero cost)");
-		} else {
-			success("ANTHROPIC_API_KEY detected — Anthropic LLM ready");
-		}
-	}
-
-	if (report.openai.available) {
-		if (report.openai.source === "codex-cli") {
-			success("Codex CLI detected — uses your subscription (zero cost)");
-		} else {
-			success("OPENAI_API_KEY detected — OpenAI LLM ready");
-		}
-	}
-
-	if (!report.anthropic.available && !report.openai.available) {
-		warn("No LLM credentials detected.");
-		info(
-			"Install Claude Code or Codex CLI — Pulse spawns them as subprocesses (uses your subscription).",
-		);
-	}
-
-	// 7. Save config
+	// 6. Save config
 	const config: PulseConfig = {
 		apiUrl,
 		token: apiToken,
@@ -99,38 +70,31 @@ export async function initCommand(_args: string[]): Promise<void> {
 	};
 
 	saveConfig(config);
-	success(`Config saved to ${c.dim(getConfigPath())}`);
+	success(`Config saved`);
 
-	// 8. Install git hooks
-	info("Installing git hooks...");
-	if (installGitHooks()) {
-		success("Git hooks installed (post-commit, pre-push)");
-	} else {
-		warn("Not in a git repository — skipping hook installation");
+	// 7. Install git hooks (only if in a git repo, silent otherwise)
+	if (detectGitRemote()) {
+		if (installGitHooks()) {
+			success("Git hooks installed");
+		}
 	}
 
-	// 9. Configure MCP for Claude Code / Codex (global)
-	if (apiToken) {
-		info("Configuring Claude Code / Codex MCP integration...");
-		if (setupGlobalMcp(apiUrl, apiToken)) {
-			success("MCP server registered globally (~/.claude/.mcp.json)");
-			info("  Pulse tools available in Claude Code & Codex across all repos");
-		}
+	// 8. Configure MCP for Claude Code / Codex (global)
+	if (setupGlobalMcp(apiUrl, apiToken ?? "")) {
+		success("MCP configured for Claude Code & Codex");
 	}
 
 	// Summary
 	console.log("");
 	console.log(`  ${c.bold("Setup complete!")}`);
 	console.log(`  ${c.dim("API:")} ${apiUrl}`);
-	console.log(`  ${c.dim("Repo:")} ${repo}`);
-	console.log(`  ${c.dim("LLM:")} auto-detect (Claude Code / Codex / API key)`);
-	if (solo) {
-		console.log(`  ${c.dim("Mode:")} solo (no auth)`);
-	} else {
-		console.log(`  ${c.dim("Token:")} ${apiToken?.slice(0, 12)}...`);
-	}
+	if (repo) console.log(`  ${c.dim("Repo:")} ${repo}`);
+	if (!solo) console.log(`  ${c.dim("Token:")} ${apiToken?.slice(0, 12)}...`);
 	console.log("");
-	console.log(`  ${c.dim("Next:")} pulse search "your query"`);
+	console.log(`  ${c.dim("Next steps:")}`);
+	console.log(`  ${c.dim("1.")} Open a new Claude Code session`);
+	console.log(`  ${c.dim("2.")} Type /mcp to verify "pulse: Connected"`);
+	console.log(`  ${c.dim("3.")} Ask your AI to search: pulse_search "your query"`);
 	console.log("");
 
 	closePrompt();
