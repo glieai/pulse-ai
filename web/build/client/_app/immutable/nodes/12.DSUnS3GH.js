@@ -1,0 +1,1 @@
+import"../chunks/DsnmJJEf.js";import"../chunks/BtpFzMAW.js";import{a as r,c as i}from"../chunks/Bws4SZbu.js";var o=i('<div class="flex min-h-screen items-center justify-center"><p class="text-text-secondary">Redirecting...</p></div>');function c(e){var t=o();r(e,t)}export{c as component};

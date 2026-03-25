@@ -1,0 +1,13 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"types": ["node"],
+		"paths": {
+			"@pulse/shared": ["../shared/src/index.ts"],
+			"@pulse/shared/*": ["../shared/src/*"],
+			"@pulse/cli/*": ["../cli/src/*"]
+		}
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["node_modules", "dist"]
+}

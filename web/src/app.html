@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light dark" />
+		<link rel="icon" type="image/png" href="/favicon.png" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<title>Pulse</title>
+		<script>
+			(function () {
+				var t = localStorage.getItem("pulse-theme");
+				if (t === "dark" || t === "light") {
+					document.documentElement.setAttribute("data-theme", t);
+				} else if (location.pathname === "/") {
+					document.documentElement.setAttribute("data-theme", "dark");
+				}
+			})();
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

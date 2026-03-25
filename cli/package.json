@@ -1,0 +1,27 @@
+{
+	"name": "@glie/pulse-cli",
+	"version": "0.1.0",
+	"description": "Pulse CLI — operational memory for AI coding teams",
+	"type": "module",
+	"bin": {
+		"pulse": "./dist/cli.mjs"
+	},
+	"files": ["dist"],
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"build": "node esbuild.mjs",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@anthropic-ai/sdk": "^0.39.0",
+		"openai": "^4.77.0"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.0",
+		"esbuild": "^0.25.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}

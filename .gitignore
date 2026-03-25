@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+.svelte-kit/
+*.vsix
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Database
+*.sqlite*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Bun
+bun.lock
+
+# Local config
+.mcp.json
+.claude/
+
+# Logs
+*.log
+
+# Test
+coverage/
+__snapshots__/

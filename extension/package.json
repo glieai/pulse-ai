@@ -1,0 +1,220 @@
+{
+	"name": "pulse-ai",
+	"displayName": "Pulse AI",
+	"publisher": "glie",
+	"description": "Operational memory for vibe coding teams — capture decisions, dead-ends and patterns from AI coding sessions automatically.",
+	"version": "0.1.19",
+	"license": "SEE LICENSE IN LICENSE",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/glieai/pulse"
+	},
+	"homepage": "https://pulse.glie.ai",
+	"icon": "resources/icon.png",
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"categories": ["Other"],
+	"keywords": ["ai", "coding", "knowledge-base", "documentation", "insights"],
+	"activationEvents": ["onStartupFinished"],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"configuration": {
+			"title": "Pulse",
+			"properties": {
+				"pulse.apiUrl": {
+					"type": "string",
+					"default": "",
+					"description": "Pulse API URL. Defaults to http://localhost:3000 (solo mode)"
+				},
+				"pulse.token": {
+					"type": "string",
+					"default": "",
+					"description": "API token (pulse_...). Not required in solo mode"
+				},
+				"pulse.repo": {
+					"type": "string",
+					"default": "",
+					"description": "Repository identifier (e.g. org/repo). Auto-detected from git remote if empty"
+				},
+				"pulse.llmProvider": {
+					"type": "string",
+					"enum": ["auto", "anthropic", "openai"],
+					"default": "auto",
+					"description": "LLM provider. 'auto' uses VS Code LM API (Copilot, Claude Code) with direct API fallback"
+				},
+				"pulse.llmApiKey": {
+					"type": "string",
+					"default": "",
+					"description": "API key for direct LLM fallback. Not needed if Copilot or Claude Code is installed"
+				},
+				"pulse.llmModel": {
+					"type": "string",
+					"default": "",
+					"description": "Model override (e.g. claude-sonnet-4-5-20250929, gpt-4o). Leave empty for defaults."
+				},
+				"pulse.watcherSizeThresholdKb": {
+					"type": "number",
+					"default": 256,
+					"minimum": 32,
+					"description": "Session file growth (in KB) before auto-generating an insight draft. Default: 256 KB."
+				},
+				"pulse.watcherPollInterval": {
+					"type": "number",
+					"default": 5000,
+					"minimum": 1000,
+					"description": "How often to check session file size (in ms). Default: 5000ms."
+				}
+			}
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "pulse",
+					"title": "Pulse",
+					"icon": "resources/icon.svg"
+				}
+			]
+		},
+		"views": {
+			"pulse": [
+				{
+					"id": "pulse.watcher",
+					"name": "Watcher"
+				},
+				{
+					"id": "pulse.drafts",
+					"name": "Drafts"
+				},
+				{
+					"id": "pulse.searchResults",
+					"name": "Search"
+				},
+				{
+					"id": "pulse.recentInsights",
+					"name": "Recent"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "pulse.search",
+				"title": "Pulse: Search Knowledge Base",
+				"icon": "$(search)"
+			},
+			{
+				"command": "pulse.insight",
+				"title": "Pulse: Create Insight",
+				"icon": "$(sparkle)"
+			},
+			{
+				"command": "pulse.push",
+				"title": "Pulse: Publish & Push",
+				"icon": "$(cloud-upload)"
+			},
+			{
+				"command": "pulse.deleteDraft",
+				"title": "Pulse: Delete Draft",
+				"icon": "$(trash)"
+			},
+			{
+				"command": "pulse.configure",
+				"title": "Pulse: Configure"
+			},
+			{
+				"command": "pulse.refresh",
+				"title": "Pulse: Refresh",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "pulse.openInsight",
+				"title": "Pulse: Open Insight"
+			},
+			{
+				"command": "pulse.watchStart",
+				"title": "Pulse: Start Watcher",
+				"icon": "$(play)"
+			},
+			{
+				"command": "pulse.watchStop",
+				"title": "Pulse: Stop Watcher",
+				"icon": "$(debug-stop)"
+			},
+			{
+				"command": "pulse.watchToggle",
+				"title": "Pulse: Toggle Watcher"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "pulse.search",
+				"key": "ctrl+shift+k",
+				"mac": "cmd+shift+k"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "pulse.watchStart",
+					"when": "view == pulse.watcher && !pulse.watcherRunning",
+					"group": "navigation"
+				},
+				{
+					"command": "pulse.watchStop",
+					"when": "view == pulse.watcher && pulse.watcherRunning",
+					"group": "navigation"
+				},
+				{
+					"command": "pulse.insight",
+					"when": "view == pulse.drafts",
+					"group": "navigation"
+				},
+				{
+					"command": "pulse.push",
+					"when": "view == pulse.drafts",
+					"group": "navigation"
+				},
+				{
+					"command": "pulse.refresh",
+					"when": "view == pulse.drafts",
+					"group": "navigation"
+				},
+				{
+					"command": "pulse.search",
+					"when": "view == pulse.searchResults",
+					"group": "navigation"
+				},
+				{
+					"command": "pulse.refresh",
+					"when": "view == pulse.recentInsights",
+					"group": "navigation"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "pulse.deleteDraft",
+					"when": "view == pulse.drafts",
+					"group": "inline"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "pulse.watcher",
+				"contents": "Auto-generate insights as you code.\n[$(play) Start Watcher](command:pulse.watchStart)",
+				"when": "!pulse.watcherRunning"
+			}
+		]
+	},
+	"scripts": {
+		"build": "node esbuild.mjs --production",
+		"watch": "node esbuild.mjs --watch",
+		"typecheck": "tsc --noEmit",
+		"test": "echo 'no tests yet'"
+	},
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"@types/vscode": "^1.100.0",
+		"esbuild": "^0.25.0"
+	}
+}

@@ -1,0 +1,213 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@plugin "@tailwindcss/typography";
+
+/* ── Theme tokens → Tailwind classes resolve to CSS variables ── */
+@theme {
+	--color-bg-base: var(--bg-base);
+	--color-bg-card: var(--bg-card);
+	--color-bg-hover: var(--bg-hover);
+	--color-border: var(--border);
+	--color-text-primary: var(--text-primary);
+	--color-text-secondary: var(--text-secondary);
+	--color-accent: var(--accent);
+	--color-accent-hover: var(--accent-hover);
+	--color-success: var(--success);
+	--color-warning: var(--warning);
+	--color-danger: var(--danger);
+	--font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", "Geist Mono", monospace;
+}
+
+/* ── Light mode (default) ── */
+:root {
+	--bg-base: #ffffff;
+	--bg-card: #fafafa;
+	--bg-hover: #f4f4f5;
+	--border: #e4e4e7;
+	--text-primary: #18181b;
+	--text-secondary: #71717a;
+	--accent: #0891b2;
+	--accent-hover: #0e7490;
+	--success: #16a34a;
+	--warning: #ca8a04;
+	--danger: #dc2626;
+}
+
+/* ── System dark preference (respects user override) ── */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--bg-base: #0a0a0c;
+		--bg-card: #111114;
+		--bg-hover: #191920;
+		--border: #232329;
+		--text-primary: #ebebef;
+		--text-secondary: #8b8b94;
+		--accent: #0891b2;
+		--accent-hover: #06b6d4;
+		--success: #22c55e;
+		--warning: #eab308;
+		--danger: #ef4444;
+	}
+}
+
+/* ── Explicit dark override ── */
+html[data-theme="dark"] {
+	--bg-base: #0a0a0c;
+	--bg-card: #111114;
+	--bg-hover: #191920;
+	--border: #232329;
+	--text-primary: #ebebef;
+	--text-secondary: #8b8b94;
+	--accent: #0891b2;
+	--accent-hover: #06b6d4;
+	--success: #22c55e;
+	--warning: #eab308;
+	--danger: #ef4444;
+}
+
+/* ── Explicit light override ── */
+html[data-theme="light"] {
+	--bg-base: #ffffff;
+	--bg-card: #fafafa;
+	--bg-hover: #f4f4f5;
+	--border: #e4e4e7;
+	--text-primary: #18181b;
+	--text-secondary: #71717a;
+	--accent: #0891b2;
+	--accent-hover: #0e7490;
+	--success: #16a34a;
+	--warning: #ca8a04;
+	--danger: #dc2626;
+}
+
+/* ── Prose (markdown) overrides — match design tokens ── */
+.prose {
+	--tw-prose-body: var(--text-primary);
+	--tw-prose-headings: var(--text-primary);
+	--tw-prose-links: var(--accent);
+	--tw-prose-bold: var(--text-primary);
+	--tw-prose-code: var(--accent);
+	--tw-prose-pre-bg: var(--bg-hover);
+	--tw-prose-pre-code: var(--text-primary);
+	--tw-prose-quotes: var(--text-secondary);
+	--tw-prose-quote-borders: var(--border);
+	--tw-prose-counters: var(--text-secondary);
+	--tw-prose-bullets: var(--text-secondary);
+	--tw-prose-hr: var(--border);
+	--tw-prose-th-borders: var(--border);
+	--tw-prose-td-borders: var(--border);
+}
+
+.prose :where(code):not(:where(pre *)) {
+	padding: 0.15em 0.35em;
+	border-radius: 0.25rem;
+	background-color: var(--bg-hover);
+	font-size: 0.85em;
+}
+
+.prose :where(code):not(:where(pre *))::before,
+.prose :where(code):not(:where(pre *))::after {
+	content: none;
+}
+
+/* ── Base styles ── */
+html {
+	background-color: var(--color-bg-base);
+	color: var(--color-text-primary);
+	font-family: var(--font-sans);
+}
+
+body {
+	margin: 0;
+	min-height: 100vh;
+}
+
+/* ── Landing page utilities ── */
+
+.landing-hidden {
+	opacity: 0;
+	transform: translateY(16px);
+}
+
+.landing-visible {
+	opacity: 1;
+	transform: translateY(0);
+	transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+/* Pulse heartbeat — brand motif */
+@keyframes pulse-ring {
+	0% {
+		transform: scale(1);
+		opacity: 0.35;
+	}
+	100% {
+		transform: scale(2.5);
+		opacity: 0;
+	}
+}
+
+@keyframes draw-pulse {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+.pulse-ring {
+	animation: pulse-ring 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.pulse-line-path {
+	stroke-dasharray: 1800;
+	stroke-dashoffset: 1800;
+	animation: draw-pulse 3s ease-out 0.5s forwards;
+}
+
+@keyframes float {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-6px);
+	}
+}
+
+@keyframes blink {
+	0%,
+	50% {
+		opacity: 1;
+	}
+	51%,
+	100% {
+		opacity: 0;
+	}
+}
+
+.animate-float {
+	animation: float 6s ease-in-out infinite;
+}
+
+.animate-blink {
+	animation: blink 1s step-end infinite;
+}
+
+@keyframes slide-down {
+	from {
+		opacity: 0;
+		transform: translateY(-16px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.animate-slide-down {
+	animation: slide-down 0.4s ease-out;
+}
+
+[id] {
+	scroll-margin-top: 5rem;
+}

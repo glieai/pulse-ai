@@ -1,0 +1,26 @@
+{
+	"name": "pulse",
+	"private": true,
+	"workspaces": ["api", "web", "cli", "extension", "shared", "mcp"],
+	"scripts": {
+		"setup": "bun install && bun run db:up && bun run db:migrate",
+		"dev": "bun --watch api/src/index.ts",
+		"dev:web": "cd web && bun --bun run dev",
+		"dev:cli": "bun run cli/src/index.ts",
+		"db:up": "docker compose up -d db",
+		"db:down": "docker compose down",
+		"db:migrate": "bun api/src/db/migrate.ts",
+		"db:seed": "bun api/src/db/seed.ts",
+		"lint": "bunx @biomejs/biome check .",
+		"lint:fix": "bunx @biomejs/biome check --write .",
+		"format": "bunx @biomejs/biome format --write .",
+		"typecheck": "tsc --noEmit -p api/tsconfig.json && tsc --noEmit -p shared/tsconfig.json && tsc --noEmit -p cli/tsconfig.json && tsc --noEmit -p extension/tsconfig.json && tsc --noEmit -p mcp/tsconfig.json && cd web && bun --bun run check",
+		"test": "PULSE_MODE=team bun test api/src shared/src cli/src",
+		"check": "bun run lint && bun run typecheck && bun run test"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.0",
+		"esbuild": "^0.27.4",
+		"typescript": "^5.7.0"
+	}
+}

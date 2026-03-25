@@ -1,0 +1,77 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: pulse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pulse
+      POSTGRES_PASSWORD: pulse
+      POSTGRES_DB: pulse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulse"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: pulse-migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://pulse:pulse@db:5432/pulse
+      JWT_SECRET: ${JWT_SECRET:-change-me-please}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      PULSE_MODE: solo
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["bun", "run", "migrate"]
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: pulse-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://pulse:pulse@db:5432/pulse
+      JWT_SECRET: ${JWT_SECRET:-change-me-please}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      PULSE_MODE: solo
+      API_PORT: 3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3000/api/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    container_name: pulse-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-5173}:3000"
+    environment:
+      PULSE_MODE: solo
+      API_BASE_URL: http://api:3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
