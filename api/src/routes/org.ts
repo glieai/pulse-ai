@@ -4,9 +4,7 @@ import { z } from "zod";
 import { sql } from "../db/client";
 import { env } from "../env";
 import { auth } from "../middleware/auth";
-import { checkLimit } from "../middleware/plan-limits";
 import { audit, getIp } from "../services/audit";
-import { sendEmail } from "../services/email";
 import {
 	buildLlmStatus,
 	getOrgSettings,
