@@ -35,12 +35,16 @@ Pulse is a self-hosted knowledge base that fills itself. It watches your AI codi
 ### Docker (recommended)
 
 ```bash
-git clone https://github.com/glieai/pulse-ai && cd pulse-ai
-cp .env.example .env
+# Download the compose file
+curl -fsSL https://raw.githubusercontent.com/glieai/pulse-ai/main/docker-compose.yml -o docker-compose.yml
+
+# Start Pulse
 docker compose up -d
 ```
 
 That's it. Pulse is running at `http://localhost:5173` — no login required in solo mode.
+
+Pre-built images are pulled from GitHub Container Registry. No build step, no dependencies.
 
 ### VS Code Extension
 
@@ -123,7 +127,7 @@ cp .env.example .env
 bun install
 
 # Start database
-docker compose up db -d
+docker compose -f docker-compose.dev.yml up -d
 
 # Setup
 cp .env.example .env

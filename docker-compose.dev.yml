@@ -1,0 +1,24 @@
+# Development: builds images locally from source
+# Usage: docker compose -f docker-compose.dev.yml up -d
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: pulse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pulse
+      POSTGRES_PASSWORD: pulse
+      POSTGRES_DB: pulse
+    ports:
+      - "${DB_PORT:-5434}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulse"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
