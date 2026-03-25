@@ -232,5 +232,4 @@ org.use("/org/invitations", teamOnly);
 org.use("/org/invitations/*", teamOnly);
 org.use("/org/delete-request", teamOnly);
 
-
 export { org };
