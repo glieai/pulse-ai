@@ -38,8 +38,8 @@ export async function initCommand(_args: string[]): Promise<void> {
 		}
 	}
 
-	// 1. Mode
-	const solo = isSoloMode() || !(await confirm("Connecting to a team server?", true));
+	// 1. Mode — always ask unless PULSE_MODE is explicitly set
+	const solo = isSoloMode() ? true : !(await confirm("Connecting to a team server?", true));
 
 	// 2. API URL
 	const defaultUrl = solo ? "http://localhost:3000" : "https://pulse.glie.ai";
@@ -61,9 +61,8 @@ export async function initCommand(_args: string[]): Promise<void> {
 		success("Token accepted");
 	}
 
-	// 5. Detect repo
-	const detectedRepo = detectGitRemote();
-	const repo = await ask("Repository", detectedRepo ?? "org/repo");
+	// 5. Detect repo (silent — don't ask, just detect)
+	const repo = detectGitRemote() ?? "";
 
 	// 6. LLM detection
 	const report = detectCredentials();

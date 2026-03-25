@@ -29,7 +29,7 @@ export interface PulseConfig {
 }
 
 export function isSoloMode(): boolean {
-	return (process.env.PULSE_MODE ?? "solo") === "solo";
+	return process.env.PULSE_MODE === "solo";
 }
 
 const CONFIG_DIR = join(homedir(), ".pulse");
