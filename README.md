@@ -6,6 +6,11 @@
 
 Your codebase tells the *what*. Pulse remembers the *why*.
 
+[![CI](https://github.com/glieai/pulse-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/glieai/pulse-ai/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![VS Code](https://img.shields.io/visual-studio-marketplace/v/glie.pulse-ai?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=glie.pulse-ai)
+[![npm](https://img.shields.io/npm/v/@glie/pulse-mcp?label=MCP)](https://www.npmjs.com/package/@glie/pulse-mcp)
+
 [Install Extension](https://marketplace.visualstudio.com/items?itemName=glie.pulse-ai) · [Self-Host](#quick-start) · [Documentation](#how-it-works)
 
 </div>
