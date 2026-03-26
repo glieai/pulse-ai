@@ -29,6 +29,12 @@ class DraftTreeItem extends vscode.TreeItem {
 		this.iconPath = kindIcon(draft.data.kind);
 		this.contextValue = "draft";
 		this.tooltip = `${draft.data.title}\n\n${draft.data.body?.slice(0, 200) ?? ""}`;
+		// Open the draft JSON file on click
+		this.command = {
+			command: "vscode.open",
+			title: "Open Draft",
+			arguments: [vscode.Uri.file(draft.filePath)],
+		};
 	}
 }
 

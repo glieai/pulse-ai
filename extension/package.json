@@ -3,7 +3,7 @@
 	"displayName": "Pulse AI",
 	"publisher": "glie",
 	"description": "Operational memory for vibe coding teams — capture decisions, dead-ends and patterns from AI coding sessions automatically.",
-	"version": "0.1.23",
+	"version": "0.1.24",
 	"license": "SEE LICENSE IN LICENSE",
 	"repository": {
 		"type": "git",
