@@ -59,12 +59,9 @@ export function loadConfig(): PulseConfig {
 	const raw = readFileSync(CONFIG_PATH, "utf-8");
 	const parsed = JSON.parse(raw);
 
-	// Validate required fields (token optional in solo mode)
-	if (!parsed.apiUrl || !parsed.repo) {
-		throw new Error("Config is incomplete. Run `pulse init` to reconfigure.");
-	}
-	if (!parsed.token && !isSoloMode()) {
-		throw new Error("Token is required in team mode. Run `pulse init` to configure.");
+	// Validate required fields (repo and token optional)
+	if (!parsed.apiUrl) {
+		throw new Error("Config is incomplete (missing apiUrl). Run `pulse init` to reconfigure.");
 	}
 
 	const config = parsed as PulseConfig;
