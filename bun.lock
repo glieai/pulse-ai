@@ -29,7 +29,7 @@
     },
     "cli": {
       "name": "@glie/pulse-cli",
-      "version": "0.1.0",
+      "version": "0.1.10",
       "bin": {
         "pulse": "./dist/cli.mjs",
       },
@@ -44,7 +44,7 @@
     },
     "extension": {
       "name": "pulse-ai",
-      "version": "0.1.19",
+      "version": "0.1.23",
       "devDependencies": {
         "@types/node": "^20.0.0",
         "@types/vscode": "^1.100.0",
@@ -52,8 +52,8 @@
       },
     },
     "mcp": {
-      "name": "@pulse/mcp",
-      "version": "0.1.0",
+      "name": "@glie/pulse-mcp",
+      "version": "0.1.2",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.26.0",
         "zod": "^3.24.0",
@@ -180,6 +180,8 @@
 
     "@glie/pulse-cli": ["@glie/pulse-cli@workspace:cli"],
 
+    "@glie/pulse-mcp": ["@glie/pulse-mcp@workspace:mcp"],
+
     "@hono/node-server": ["@hono/node-server@1.19.11", "", { "peerDependencies": { "hono": "^4" } }, "sha512-dr8/3zEaB+p0D2n/IUrlPF1HZm586qgJNXK1a9fhg/PzdtkK7Ksd5l312tJX2yBuALqDYBlG20QEbayqPyxn+g=="],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
@@ -227,8 +229,6 @@
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 
     "@pulse/api": ["@pulse/api@workspace:api"],
-
-    "@pulse/mcp": ["@pulse/mcp@workspace:mcp"],
 
     "@pulse/shared": ["@pulse/shared@workspace:shared"],
 
