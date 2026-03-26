@@ -1,11 +1,5 @@
 import { execSync } from "node:child_process";
-import {
-	type PulseConfig,
-	configExists,
-	defaults,
-	isSoloMode,
-	saveConfig,
-} from "../config";
+import { type PulseConfig, configExists, defaults, isSoloMode, saveConfig } from "../config";
 import { banner, c, error, info, success } from "../output";
 import { ask, closePrompt, confirm } from "../prompt";
 import { installGitHooks } from "../watcher/hooks";
@@ -70,7 +64,7 @@ export async function initCommand(_args: string[]): Promise<void> {
 	};
 
 	saveConfig(config);
-	success(`Config saved`);
+	success("Config saved");
 
 	// 7. Install git hooks (only if in a git repo, silent otherwise)
 	if (detectGitRemote()) {
