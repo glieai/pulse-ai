@@ -1,23 +1,10 @@
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { c, error, info, success } from "../output";
-
-interface McpConfig {
-	mcpServers: Record<
-		string,
-		{
-			type: string;
-			command: string;
-			args: string[];
-			env?: Record<string, string>;
-		}
-	>;
-}
+import { c, error, info, success, warn } from "../output";
 
 const HOME = homedir();
-const CLAUDE_DIR = join(HOME, ".claude");
-const MCP_JSON_PATH = join(CLAUDE_DIR, ".mcp.json");
 const CODEX_DIR = join(HOME, ".codex");
 const CODEX_CONFIG_PATH = join(CODEX_DIR, "config.toml");
 
@@ -28,33 +15,75 @@ function normalizeApiUrl(apiUrl: string): string {
 	return url;
 }
 
-/**
- * Configure Pulse MCP server globally for Claude Code.
- * Writes ~/.claude/.mcp.json + ~/.claude/settings.json.
- */
-function setupClaudeCode(normalizedUrl: string, token: string): void {
-	if (!existsSync(CLAUDE_DIR)) {
-		mkdirSync(CLAUDE_DIR, { recursive: true });
-	}
+/** Find the claude CLI binary (PATH or VS Code extension bundle). */
+function findClaudeBinary(): string | null {
+	try {
+		return execSync("which claude", { encoding: "utf-8", timeout: 5_000 }).trim();
+	} catch {}
 
-	// .mcp.json
-	let mcpConfig: McpConfig = { mcpServers: {} };
-	if (existsSync(MCP_JSON_PATH)) {
+	const searchDirs = [
+		join(HOME, ".vscode-server", "extensions"),
+		join(HOME, ".vscode", "extensions"),
+		join(HOME, ".cursor", "extensions"),
+	];
+	for (const dir of searchDirs) {
 		try {
-			mcpConfig = JSON.parse(readFileSync(MCP_JSON_PATH, "utf-8"));
+			if (!existsSync(dir)) continue;
+			for (const entry of require("node:fs").readdirSync(dir)) {
+				if (entry.startsWith("anthropic.claude-code")) {
+					const bin = join(dir, entry, "resources", "native-binary", "claude");
+					if (existsSync(bin)) return bin;
+				}
+			}
 		} catch {}
 	}
+	return null;
+}
 
-	mcpConfig.mcpServers.pulse = {
-		type: "stdio",
-		command: "npx",
-		args: ["-y", "@glie/pulse-mcp@latest"],
-		env: {
-			PULSE_API_URL: normalizedUrl,
-			PULSE_API_TOKEN: token,
-		},
-	};
-	writeFileSync(MCP_JSON_PATH, `${JSON.stringify(mcpConfig, null, "\t")}\n`);
+/**
+ * Configure Pulse MCP server globally for Claude Code.
+ * Uses `claude mcp add --scope user` (writes to ~/.claude.json).
+ */
+function setupClaudeCode(normalizedUrl: string, token: string): boolean {
+	const claude = findClaudeBinary();
+	if (!claude) {
+		warn("Claude Code not found — skipping Claude Code MCP setup");
+		info("  Install Claude Code and re-run: pulse setup-mcp");
+		return false;
+	}
+
+	// Remove existing pulse MCP (ignore errors if not present)
+	try {
+		execSync(`${JSON.stringify(claude)} mcp remove pulse --scope user`, {
+			encoding: "utf-8",
+			timeout: 10_000,
+			stdio: "pipe",
+		});
+	} catch {}
+
+	// Add with user scope (global, all projects)
+	execSync(
+		[
+			JSON.stringify(claude),
+			"mcp",
+			"add",
+			"pulse",
+			"--scope",
+			"user",
+			"--transport",
+			"stdio",
+			"-e",
+			`PULSE_API_URL=${normalizedUrl}`,
+			"-e",
+			`PULSE_API_TOKEN=${token}`,
+			"--",
+			"npx",
+			"-y",
+			"@glie/pulse-mcp@latest",
+		].join(" "),
+		{ encoding: "utf-8", timeout: 10_000, stdio: "pipe" },
+	);
+	return true;
 }
 
 /**
@@ -74,7 +103,7 @@ function setupCodex(normalizedUrl: string, token: string): void {
 	const block = [
 		"[mcp_servers.pulse]",
 		'command = "npx"',
-		'args = ["-y", "@glie/pulse-mcp"]',
+		'args = ["-y", "@glie/pulse-mcp@latest"]',
 		"",
 		"[mcp_servers.pulse.env]",
 		`PULSE_API_URL = "${normalizedUrl}"`,
@@ -97,20 +126,24 @@ function setupCodex(normalizedUrl: string, token: string): void {
 
 /**
  * Configure Pulse MCP server globally for both Claude Code and Codex.
- * Safe to call multiple times — only writes if config is missing or outdated.
+ * Uses the official `claude mcp add --scope user` API.
  */
 export function setupGlobalMcp(apiUrl: string, token: string): boolean {
 	const normalizedUrl = normalizeApiUrl(apiUrl);
+	let ok = false;
 
 	try {
-		setupClaudeCode(normalizedUrl, token);
-	} catch {}
+		ok = setupClaudeCode(normalizedUrl, token);
+	} catch (err) {
+		warn(`Claude Code MCP setup failed: ${err instanceof Error ? err.message : "unknown"}`);
+	}
 
 	try {
 		setupCodex(normalizedUrl, token);
+		ok = true;
 	} catch {}
 
-	return true;
+	return ok;
 }
 
 /** Standalone command for setting up MCP integration */
@@ -126,10 +159,7 @@ export default async function setupMcpCommand(args: string[]): Promise<void> {
 
 	const ok = setupGlobalMcp(apiUrl, token);
 	if (ok) {
-		success("MCP integration configured globally");
-		info(`  ${c.dim("Claude Code:")} ~/.claude/.mcp.json + settings.json`);
-		info(`  ${c.dim("Codex:")} ~/.codex/config.toml`);
-		console.log("");
-		info("Restart Claude Code / Codex to activate the Pulse tools.");
+		success("MCP server registered globally (~/.claude.json)");
+		info("  Pulse tools available in Claude Code & Codex across all repos");
 	}
 }

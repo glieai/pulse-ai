@@ -64,18 +64,20 @@ export async function initCommand(_args: string[]): Promise<void> {
 	};
 
 	saveConfig(config);
-	success("Config saved");
+	success("Config saved to ~/.pulse/config.json");
 
-	// 7. Install git hooks (only if in a git repo, silent otherwise)
-	if (detectGitRemote()) {
-		if (installGitHooks()) {
+	// 7. Install git hooks (only if in a git repo, completely silent otherwise)
+	try {
+		if (detectGitRemote() && installGitHooks()) {
 			success("Git hooks installed");
 		}
-	}
+	} catch {}
 
-	// 8. Configure MCP for Claude Code / Codex (global)
+	// 8. Configure MCP for Claude Code / Codex (global, user scope)
+	info("Configuring MCP for Claude Code / Codex...");
 	if (setupGlobalMcp(apiUrl, apiToken ?? "")) {
-		success("MCP configured for Claude Code & Codex");
+		success("MCP server registered globally (~/.claude.json)");
+		info("  Pulse tools available in Claude Code & Codex across all repos");
 	}
 
 	// Summary
@@ -85,10 +87,10 @@ export async function initCommand(_args: string[]): Promise<void> {
 	if (repo) console.log(`  ${c.dim("Repo:")} ${repo}`);
 	if (!solo) console.log(`  ${c.dim("Token:")} ${apiToken?.slice(0, 12)}...`);
 	console.log("");
-	console.log(`  ${c.dim("Next steps:")}`);
-	console.log(`  ${c.dim("1.")} Open a new Claude Code session`);
-	console.log(`  ${c.dim("2.")} Type /mcp to verify "pulse: Connected"`);
-	console.log(`  ${c.dim("3.")} Ask your AI to search: pulse_search "your query"`);
+	console.log(`  ${c.bold("Next steps:")}`);
+	console.log(`  ${c.dim("1.")} Open a new Claude Code or Codex session`);
+	console.log(`  ${c.dim("2.")} Type ${c.cyan("/mcp")} to verify "pulse: Connected"`);
+	console.log(`  ${c.dim("3.")} Ask: ${c.cyan('pulse_search "your query"')}`);
 	console.log("");
 
 	closePrompt();
