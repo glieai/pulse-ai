@@ -15,7 +15,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.39.0",
-		"openai": "^4.77.0"
+		"openai": "^6.33.0"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.2.0",
