@@ -3,7 +3,7 @@
 	"displayName": "Pulse AI",
 	"publisher": "glie",
 	"description": "Operational memory for vibe coding teams — capture decisions, dead-ends and patterns from AI coding sessions automatically.",
-	"version": "0.1.19",
+	"version": "0.1.22",
 	"license": "SEE LICENSE IN LICENSE",
 	"repository": {
 		"type": "git",
@@ -22,48 +22,33 @@
 		"configuration": {
 			"title": "Pulse",
 			"properties": {
-				"pulse.apiUrl": {
-					"type": "string",
-					"default": "",
-					"description": "Pulse API URL. Defaults to http://localhost:3000 (solo mode)"
-				},
-				"pulse.token": {
-					"type": "string",
-					"default": "",
-					"description": "API token (pulse_...). Not required in solo mode"
-				},
-				"pulse.repo": {
-					"type": "string",
-					"default": "",
-					"description": "Repository identifier (e.g. org/repo). Auto-detected from git remote if empty"
-				},
 				"pulse.llmProvider": {
 					"type": "string",
 					"enum": ["auto", "anthropic", "openai"],
 					"default": "auto",
-					"description": "LLM provider. 'auto' uses VS Code LM API (Copilot, Claude Code) with direct API fallback"
+					"description": "LLM provider for insight generation. 'auto' uses Claude Code / Codex CLI"
 				},
 				"pulse.llmApiKey": {
 					"type": "string",
 					"default": "",
-					"description": "API key for direct LLM fallback. Not needed if Copilot or Claude Code is installed"
+					"description": "API key for direct LLM fallback. Not needed if Claude Code or Codex is installed"
 				},
 				"pulse.llmModel": {
 					"type": "string",
 					"default": "",
-					"description": "Model override (e.g. claude-sonnet-4-5-20250929, gpt-4o). Leave empty for defaults."
+					"description": "Model override (e.g. claude-sonnet-4-5-20250929). Leave empty for defaults"
 				},
 				"pulse.watcherSizeThresholdKb": {
 					"type": "number",
 					"default": 256,
 					"minimum": 32,
-					"description": "Session file growth (in KB) before auto-generating an insight draft. Default: 256 KB."
+					"description": "Session file growth (in KB) before auto-generating an insight draft"
 				},
 				"pulse.watcherPollInterval": {
 					"type": "number",
 					"default": 5000,
 					"minimum": 1000,
-					"description": "How often to check session file size (in ms). Default: 5000ms."
+					"description": "How often to check session file size (in ms)"
 				}
 			}
 		},

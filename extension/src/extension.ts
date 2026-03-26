@@ -9,7 +9,7 @@ import { registerOpenInsightCommand } from "./commands/open-insight";
 import { registerPushCommand } from "./commands/push";
 import { registerRefreshCommand } from "./commands/refresh";
 import { registerSearchCommand } from "./commands/search";
-import { detectRepoFromGit, onConfigChange, resolveConfig } from "./config";
+import { detectRepoFromGit, isConfigured, onConfigChange, resolveConfig } from "./config";
 import { registerModelChangeListener } from "./llm/vscode-lm";
 import { PulseCodeLensProvider } from "./providers/codelens";
 import { DraftsTreeProvider } from "./providers/drafts-tree";
@@ -33,9 +33,25 @@ export function getClient(): PulseApiClient | null {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+	// Check if pulse has been configured via CLI
+	if (!isConfigured()) {
+		vscode.window
+			.showInformationMessage(
+				"Pulse: Run `npx @glie/pulse-cli init` in your terminal to get started.",
+				"Open Terminal",
+			)
+			.then((action) => {
+				if (action === "Open Terminal") {
+					const terminal = vscode.window.createTerminal("Pulse Setup");
+					terminal.show();
+					terminal.sendText("npx @glie/pulse-cli@latest init");
+				}
+			});
+	}
+
 	const config = resolveConfig();
 
-	// Auto-detect repo from git remote (primary source, like git extension)
+	// Auto-detect repo from git remote
 	const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 	if (cwd) {
 		const gitRepo = detectRepoFromGit(cwd);

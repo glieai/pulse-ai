@@ -19,18 +19,16 @@ const SOLO_DEFAULTS: PulseExtensionConfig = {
 };
 
 /**
- * 4-layer config resolution with solo-mode defaults:
- * 0. Solo defaults (localhost:3000, no token, auto-detect repo)
- * 1. ~/.pulse/config.json overlay (shared with CLI)
- * 2. VS Code settings overlay
- * 3. Env vars overlay
+ * Config resolution — single source of truth:
+ * 1. ~/.pulse/config.json (created by `pulse init`)
+ * 2. Env vars overlay (for CI/containers)
  *
  * Always returns a valid config. Solo mode needs zero configuration.
  */
 export function resolveConfig(): PulseExtensionConfig {
 	const config: PulseExtensionConfig = { ...SOLO_DEFAULTS };
 
-	// Layer 1: ~/.pulse/config.json
+	// ~/.pulse/config.json — shared with CLI
 	if (existsSync(CONFIG_PATH)) {
 		try {
 			const raw = readFileSync(CONFIG_PATH, "utf-8");
@@ -38,26 +36,19 @@ export function resolveConfig(): PulseExtensionConfig {
 			if (parsed.apiUrl) config.apiUrl = parsed.apiUrl;
 			if (parsed.token) config.token = parsed.token;
 			if (parsed.repo) config.repo = parsed.repo;
-		} catch {
-			// Corrupted config — continue with defaults
-		}
+		} catch {}
 	}
 
-	// Layer 2: VS Code settings overlay
-	const vscodeConfig = vscode.workspace.getConfiguration("pulse");
-	const vsApiUrl = vscodeConfig.get<string>("apiUrl");
-	const vsToken = vscodeConfig.get<string>("token");
-	const vsRepo = vscodeConfig.get<string>("repo");
-
-	if (vsApiUrl) config.apiUrl = vsApiUrl;
-	if (vsToken) config.token = vsToken;
-	if (vsRepo) config.repo = vsRepo;
-
-	// Layer 3: Env vars overlay
+	// Env vars override (CI, containers)
 	if (process.env.PULSE_API_URL) config.apiUrl = process.env.PULSE_API_URL;
 	if (process.env.PULSE_TOKEN) config.token = process.env.PULSE_TOKEN;
 
 	return config;
+}
+
+/** Returns true if pulse has been configured (config.json exists with token or solo mode). */
+export function isConfigured(): boolean {
+	return existsSync(CONFIG_PATH);
 }
 
 /** Extract repo name from git remote. Returns empty string if not in a git repo. */
