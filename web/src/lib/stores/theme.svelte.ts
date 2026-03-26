@@ -28,6 +28,6 @@ export function initTheme() {
 	if (typeof localStorage === "undefined") return;
 	const saved = localStorage.getItem("pulse-theme");
 	if (saved === "light" || saved === "dark") {
-		current = saved;
+		setTheme(saved);
 	}
 }
