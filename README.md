@@ -43,16 +43,13 @@ Pulse is running at `http://localhost:5173` — no login required in solo mode. 
 
 ### 2. Connect your tools
 
-Choose how you work:
-
-**VS Code** — Install [Pulse AI](https://marketplace.visualstudio.com/items?itemName=glie.pulse-ai) from the Marketplace. Set API URL → `http://localhost:3000`. Done — MCP and watcher are configured automatically.
-
-**Terminal** — No VS Code needed:
-
 ```bash
-npx @glie/pulse-cli init    # configures MCP for Claude Code + Codex
-pulse watch                  # starts capturing insights
+npx @glie/pulse-cli init
 ```
+
+This configures everything in one step — MCP for Claude Code + Codex, globally, across all your projects.
+
+**Optional:** Install the [Pulse AI](https://marketplace.visualstudio.com/items?itemName=glie.pulse-ai) VS Code extension for a sidebar with drafts, search, watcher controls, and CodeLens annotations. The extension reads the config created by the CLI — no extra setup needed.
 
 ### 3. Code as usual
 
