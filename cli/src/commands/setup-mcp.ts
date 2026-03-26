@@ -151,42 +151,68 @@ export function setupGlobalMcp(apiUrl: string, token: string): boolean {
 }
 
 /**
- * Create a local .mcp.json in the given directory.
- * This ensures the MCP server works in this specific project folder
- * regardless of whether the global user scope is picked up.
+ * Create/update a local .mcp.json in the given directory.
+ * Merges with existing config — only adds/updates the "pulse" entry,
+ * preserving any other MCP servers the dev already has.
+ * Also ensures .mcp.json is in .gitignore to prevent token leaks.
  */
 export function ensureLocalMcp(cwd: string, apiUrl: string, token: string): void {
 	const normalizedUrl = normalizeApiUrl(apiUrl);
 	const mcpPath = join(cwd, ".mcp.json");
 	const mode = token ? "team" : "solo";
 
-	const mcpConfig = {
-		mcpServers: {
-			pulse: {
-				type: "stdio",
-				command: "npx",
-				args: ["-y", "--package=@glie/pulse-mcp@latest", "pulse-mcp"],
-				env: {
-					PULSE_API_URL: normalizedUrl,
-					PULSE_API_TOKEN: token,
-					PULSE_MODE: mode,
-				},
-			},
+	const pulseEntry = {
+		type: "stdio",
+		command: "npx",
+		args: ["-y", "--package=@glie/pulse-mcp@latest", "pulse-mcp"],
+		env: {
+			PULSE_API_URL: normalizedUrl,
+			PULSE_API_TOKEN: token,
+			PULSE_MODE: mode,
 		},
 	};
 
-	// Only write if missing or outdated
+	// Merge with existing .mcp.json (preserve other servers)
+	let mcpConfig: { mcpServers: Record<string, unknown> } = { mcpServers: {} };
 	if (existsSync(mcpPath)) {
 		try {
 			const existing = JSON.parse(readFileSync(mcpPath, "utf-8"));
-			const pulse = existing?.mcpServers?.pulse;
-			if (pulse?.env?.PULSE_API_TOKEN === token && pulse?.env?.PULSE_API_URL === normalizedUrl) {
-				return; // Already correct
+			mcpConfig = existing;
+			mcpConfig.mcpServers ??= {};
+			// Skip if already correct
+			const pulse = mcpConfig.mcpServers.pulse as Record<string, unknown> | undefined;
+			const env = pulse?.env as Record<string, string> | undefined;
+			if (env?.PULSE_API_TOKEN === token && env?.PULSE_API_URL === normalizedUrl) {
+				ensureGitignore(cwd);
+				return;
 			}
 		} catch {}
 	}
 
+	mcpConfig.mcpServers.pulse = pulseEntry;
 	writeFileSync(mcpPath, `${JSON.stringify(mcpConfig, null, "\t")}\n`);
+
+	// Ensure .mcp.json is in .gitignore
+	ensureGitignore(cwd);
+}
+
+/** Add .mcp.json to .gitignore if not already present. */
+function ensureGitignore(cwd: string): void {
+	const gitignorePath = join(cwd, ".gitignore");
+	if (existsSync(gitignorePath)) {
+		const content = readFileSync(gitignorePath, "utf-8");
+		if (content.includes(".mcp.json")) return;
+		writeFileSync(
+			gitignorePath,
+			`${content.trimEnd()}\n\n# Pulse MCP config (contains API token)\n.mcp.json\n`,
+		);
+	} else {
+		// Only create .gitignore if we're in a git repo
+		try {
+			execSync("git rev-parse --git-dir", { cwd, stdio: "pipe" });
+			writeFileSync(gitignorePath, "# Pulse MCP config (contains API token)\n.mcp.json\n");
+		} catch {}
+	}
 }
 
 /** Standalone command for setting up MCP integration */
