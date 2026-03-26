@@ -79,7 +79,8 @@ function setupClaudeCode(normalizedUrl: string, token: string): boolean {
 			"--",
 			"npx",
 			"-y",
-			"@glie/pulse-mcp@latest",
+			"--package=@glie/pulse-mcp@latest",
+			"pulse-mcp",
 		].join(" "),
 		{ encoding: "utf-8", timeout: 10_000, stdio: "pipe" },
 	);
@@ -103,7 +104,7 @@ function setupCodex(normalizedUrl: string, token: string): void {
 	const block = [
 		"[mcp_servers.pulse]",
 		'command = "npx"',
-		'args = ["-y", "@glie/pulse-mcp@latest"]',
+		'args = ["-y", "--package=@glie/pulse-mcp@latest", "pulse-mcp"]',
 		"",
 		"[mcp_servers.pulse.env]",
 		`PULSE_API_URL = "${normalizedUrl}"`,
@@ -160,7 +161,7 @@ export function ensureLocalMcp(cwd: string, apiUrl: string, token: string): void
 			pulse: {
 				type: "stdio",
 				command: "npx",
-				args: ["-y", "@glie/pulse-mcp@latest"],
+				args: ["-y", "--package=@glie/pulse-mcp@latest", "pulse-mcp"],
 				env: {
 					PULSE_API_URL: normalizedUrl,
 					PULSE_API_TOKEN: token,

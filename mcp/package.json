@@ -1,8 +1,11 @@
 {
 	"name": "@glie/pulse-mcp",
-	"version": "0.1.2",
+	"version": "0.1.5",
 	"private": false,
 	"type": "module",
+	"bin": {
+		"pulse-mcp": "./bin.js"
+	},
 	"scripts": {
 		"start": "bun run src/server.ts",
 		"typecheck": "tsc --noEmit",
