@@ -26,7 +26,7 @@
 		"@pulse/shared": "workspace:*",
 		"@tailwindcss/typography": "^0.5.19",
 		"arctic": "^3.7.0",
-		"lucide-svelte": "^0.400.0",
+		"lucide-svelte": "^1.0.1",
 		"marked": "^17.0.1",
 		"svelte-sonner": "^1.0.7"
 	}
