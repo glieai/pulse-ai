@@ -46,16 +46,17 @@ Optionally copy `.env.example` to `.env` to customize settings (default values w
 ### 2. Connect your tools
 
 ```bash
-npx @glie/pulse-cli init
+npx @glie/pulse-cli init       # one-time setup: config + MCP registration
+npx @glie/pulse-cli setup-mcp  # run in each project folder to enable MCP there
 ```
 
-This configures everything in one step — MCP for Claude Code + Codex, globally, across all your projects.
+The `init` creates your config (`~/.pulse/config.json`) and registers the MCP server globally. Then run `setup-mcp` in each project folder where you want MCP available — or just run `pulse watch` which does both.
 
 **Optional:** Install the [Pulse AI](https://marketplace.visualstudio.com/items?itemName=glie.pulse-ai) VS Code extension for a sidebar with drafts, search, watcher controls, and CodeLens annotations. The extension reads the config created by the CLI — no extra setup needed.
 
 ### 3. Code as usual
 
-Your next commit or AI session generates the first insight. Your AI agents (Claude Code, Codex) now query your knowledge base automatically via MCP.
+Open Claude Code or Codex in any configured project. Your AI agents query the knowledge base automatically via MCP. Run `pulse watch` to auto-generate insights from commits and AI sessions.
 
 ## How It Works
 

@@ -5,7 +5,25 @@ All notable changes to Pulse will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2025-03-25
+## [0.1.1] - 2026-03-26
+
+### Fixed
+- **CLI** — `setup-mcp` reads from `~/.pulse/config.json` when no args given
+- **CLI** — Bundle changed from ESM to CJS (fixes "Dynamic require of stream" error)
+- **CLI** — Git is now optional — `watch` and `setup-mcp` work in non-git folders
+- **CLI** — Silent git stderr (no more "fatal: not a git repository" messages)
+- **MCP** — npx scoped package resolution (bin wrapper + `--package` flag)
+- **MCP** — Correct license (Apache-2.0) and homepage in npm metadata
+- **Extension** — Reads config from `~/.pulse/config.json` (no more VS Code settings for API URL/token)
+- **Extension** — Shows "Run `pulse init`" message with Open Terminal button when not configured
+- **Extension** — New "Pulse: Setup MCP in this folder" command
+- **Extension** — Watcher start (▶) auto-creates local `.mcp.json`
+
+### Changed
+- **Setup flow** — CLI-first: `pulse init` → `pulse setup-mcp` per folder → done
+- **Extension** — Removed `pulse.apiUrl`, `pulse.token`, `pulse.repo` settings (single source: CLI config)
+
+## [0.1.0] - 2026-03-25
 
 ### Added
 - **API** — Hono + Bun REST API with PostgreSQL + pgvector
