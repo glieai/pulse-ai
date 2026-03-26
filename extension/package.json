@@ -3,7 +3,7 @@
 	"displayName": "Pulse AI",
 	"publisher": "glie",
 	"description": "Operational memory for vibe coding teams — capture decisions, dead-ends and patterns from AI coding sessions automatically.",
-	"version": "0.1.22",
+	"version": "0.1.23",
 	"license": "SEE LICENSE IN LICENSE",
 	"repository": {
 		"type": "git",
@@ -105,6 +105,10 @@
 			{
 				"command": "pulse.configure",
 				"title": "Pulse: Configure"
+			},
+			{
+				"command": "pulse.setupMcp",
+				"title": "Pulse: Setup MCP in this folder"
 			},
 			{
 				"command": "pulse.refresh",

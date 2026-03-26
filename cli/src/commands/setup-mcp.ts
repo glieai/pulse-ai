@@ -146,6 +146,43 @@ export function setupGlobalMcp(apiUrl: string, token: string): boolean {
 	return ok;
 }
 
+/**
+ * Create a local .mcp.json in the given directory.
+ * This ensures the MCP server works in this specific project folder
+ * regardless of whether the global user scope is picked up.
+ */
+export function ensureLocalMcp(cwd: string, apiUrl: string, token: string): void {
+	const normalizedUrl = normalizeApiUrl(apiUrl);
+	const mcpPath = join(cwd, ".mcp.json");
+
+	const mcpConfig = {
+		mcpServers: {
+			pulse: {
+				type: "stdio",
+				command: "npx",
+				args: ["-y", "@glie/pulse-mcp@latest"],
+				env: {
+					PULSE_API_URL: normalizedUrl,
+					PULSE_API_TOKEN: token,
+				},
+			},
+		},
+	};
+
+	// Only write if missing or outdated
+	if (existsSync(mcpPath)) {
+		try {
+			const existing = JSON.parse(readFileSync(mcpPath, "utf-8"));
+			const pulse = existing?.mcpServers?.pulse;
+			if (pulse?.env?.PULSE_API_TOKEN === token && pulse?.env?.PULSE_API_URL === normalizedUrl) {
+				return; // Already correct
+			}
+		} catch {}
+	}
+
+	writeFileSync(mcpPath, `${JSON.stringify(mcpConfig, null, "\t")}\n`);
+}
+
 /** Standalone command for setting up MCP integration */
 export default async function setupMcpCommand(args: string[]): Promise<void> {
 	const apiUrl = args[0];
@@ -162,4 +199,9 @@ export default async function setupMcpCommand(args: string[]): Promise<void> {
 		success("MCP server registered globally (~/.claude.json)");
 		info("  Pulse tools available in Claude Code & Codex across all repos");
 	}
+
+	// Also create local .mcp.json in current directory
+	const cwd = process.cwd();
+	ensureLocalMcp(cwd, apiUrl, token);
+	success(`Local .mcp.json created in ${cwd}`);
 }

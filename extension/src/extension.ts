@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 // Pulse AI — VS Code extension
 import { deleteDraft } from "@pulse/shared";
 import type { LocalDraft } from "@pulse/shared";
@@ -17,6 +19,31 @@ import { RecentTreeProvider } from "./providers/recent-tree";
 import { SearchTreeProvider } from "./providers/search-tree";
 import { WatcherTreeProvider } from "./providers/watcher-tree";
 import { PulseWatcher } from "./watcher/watcher";
+
+/** Create a local .mcp.json in a project folder for Claude Code / Codex. */
+function ensureLocalMcpFile(cwd: string, apiUrl: string, token: string): void {
+	let normalizedUrl = apiUrl.replace(/\/+$/, "");
+	if (!normalizedUrl.endsWith("/api")) normalizedUrl += "/api";
+	const mcpPath = join(cwd, ".mcp.json");
+	const mcpConfig = {
+		mcpServers: {
+			pulse: {
+				type: "stdio",
+				command: "npx",
+				args: ["-y", "@glie/pulse-mcp@latest"],
+				env: { PULSE_API_URL: normalizedUrl, PULSE_API_TOKEN: token },
+			},
+		},
+	};
+	if (existsSync(mcpPath)) {
+		try {
+			const existing = JSON.parse(readFileSync(mcpPath, "utf-8"));
+			const p = existing?.mcpServers?.pulse;
+			if (p?.env?.PULSE_API_TOKEN === token && p?.env?.PULSE_API_URL === normalizedUrl) return;
+		} catch {}
+	}
+	writeFileSync(mcpPath, `${JSON.stringify(mcpConfig, null, "\t")}\n`);
+}
 
 let client: PulseApiClient | null = null;
 let searchTree: SearchTreeProvider | null = null;
@@ -151,9 +178,30 @@ export function activate(context: vscode.ExtensionContext): void {
 	watcher.onDidChangeStatus(() => updateStatusBar(watcher));
 	context.subscriptions.push(
 		watcher,
-		vscode.commands.registerCommand("pulse.watchStart", () => watcher?.start()),
+		vscode.commands.registerCommand("pulse.watchStart", () => {
+			if (cwd && config.token) ensureLocalMcpFile(cwd, config.apiUrl, config.token);
+			watcher?.start();
+		}),
 		vscode.commands.registerCommand("pulse.watchStop", () => watcher?.stop()),
-		vscode.commands.registerCommand("pulse.watchToggle", () => watcher?.toggle()),
+		vscode.commands.registerCommand("pulse.watchToggle", () => {
+			if (!watcher?.isActive && cwd && config.token)
+				ensureLocalMcpFile(cwd, config.apiUrl, config.token);
+			watcher?.toggle();
+		}),
+		vscode.commands.registerCommand("pulse.setupMcp", () => {
+			if (!cwd) {
+				vscode.window.showWarningMessage("Pulse: No workspace folder open.");
+				return;
+			}
+			if (!config.token) {
+				vscode.window.showWarningMessage("Pulse: Run `npx @glie/pulse-cli init` first.");
+				return;
+			}
+			ensureLocalMcpFile(cwd, config.apiUrl, config.token);
+			vscode.window.showInformationMessage(
+				"Pulse: MCP configured for this folder. Restart Claude Code to activate.",
+			);
+		}),
 	);
 
 	// Restore watcher state — only auto-start if it was running before window close/reload
