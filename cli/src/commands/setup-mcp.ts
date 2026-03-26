@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { c, error, info, success, warn } from "../output";
+import { error, info, success, warn } from "../output";
 
 const HOME = homedir();
 const CODEX_DIR = join(HOME, ".codex");
