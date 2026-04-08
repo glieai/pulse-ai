@@ -218,6 +218,6 @@
 	"devDependencies": {
 		"@types/node": "^25.5.0",
 		"@types/vscode": "^1.100.0",
-		"esbuild": "^0.25.0"
+		"esbuild": "^0.28.0"
 	}
 }
