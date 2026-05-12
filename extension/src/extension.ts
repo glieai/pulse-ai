@@ -169,6 +169,40 @@ export function activate(context: vscode.ExtensionContext): void {
 		}),
 	);
 
+	// Discard ALL visible drafts (local only — does not publish)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("pulse.discardAllDrafts", async () => {
+			const visible = draftsTree?.getVisibleDrafts() ?? [];
+			if (visible.length === 0) {
+				vscode.window.showInformationMessage("Pulse: No drafts to discard.");
+				return;
+			}
+			const confirm = await vscode.window.showWarningMessage(
+				`Discard ${visible.length} draft${visible.length === 1 ? "" : "s"}? This deletes the local files and cannot be undone.`,
+				{ modal: true },
+				"Discard All",
+			);
+			if (confirm !== "Discard All") return;
+			let failed = 0;
+			for (const d of visible) {
+				try {
+					deleteDraft(d.filePath);
+				} catch {
+					failed++;
+				}
+			}
+			draftsTree?.refresh();
+			const deleted = visible.length - failed;
+			if (failed === 0) {
+				vscode.window.showInformationMessage(`Pulse: Discarded ${deleted} drafts.`);
+			} else {
+				vscode.window.showWarningMessage(
+					`Pulse: Discarded ${deleted} drafts, ${failed} failed.`,
+				);
+			}
+		}),
+	);
+
 	// Open draft in webview detail panel
 	context.subscriptions.push(
 		vscode.commands.registerCommand("pulse.openDraft", (draft: LocalDraft) => {
