@@ -196,9 +196,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (failed === 0) {
 				vscode.window.showInformationMessage(`Pulse: Discarded ${deleted} drafts.`);
 			} else {
-				vscode.window.showWarningMessage(
-					`Pulse: Discarded ${deleted} drafts, ${failed} failed.`,
-				);
+				vscode.window.showWarningMessage(`Pulse: Discarded ${deleted} drafts, ${failed} failed.`);
 			}
 		}),
 	);
