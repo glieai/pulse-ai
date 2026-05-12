@@ -103,6 +103,11 @@
 				"icon": "$(trash)"
 			},
 			{
+				"command": "pulse.discardAllDrafts",
+				"title": "Pulse: Discard All Drafts",
+				"icon": "$(clear-all)"
+			},
+			{
 				"command": "pulse.publishDraft",
 				"title": "Pulse: Publish Draft",
 				"icon": "$(cloud-upload)"
@@ -176,6 +181,11 @@
 					"command": "pulse.refresh",
 					"when": "view == pulse.drafts",
 					"group": "navigation"
+				},
+				{
+					"command": "pulse.discardAllDrafts",
+					"when": "view == pulse.drafts",
+					"group": "navigation@99"
 				},
 				{
 					"command": "pulse.search",

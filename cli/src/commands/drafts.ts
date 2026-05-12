@@ -1,4 +1,5 @@
-import { deleteDraft, listDrafts, readDraft } from "@pulse/shared";
+import { deleteDraft, listDrafts } from "@pulse/shared";
+import type { LocalDraft } from "@pulse/shared";
 import { loadConfig } from "../config";
 import { apiPost } from "../http";
 import { banner, c, error, info, success, warn } from "../output";
@@ -65,11 +66,7 @@ export async function draftsCommand(_args: string[]): Promise<void> {
 
 async function reviewDraft(
 	config: { apiUrl: string; token?: string; repo: string },
-	draft: typeof listDrafts extends (...a: unknown[]) => infer R
-		? R extends (infer I)[]
-			? I
-			: never
-		: never,
+	draft: LocalDraft,
 ): Promise<void> {
 	console.log("");
 	console.log(`  ${c.bold(`[${draft.data.kind?.toUpperCase()}] ${draft.data.title}`)}`);
@@ -90,7 +87,7 @@ async function reviewDraft(
 
 async function publishOne(
 	config: { apiUrl: string; token?: string; repo: string },
-	draft: { filePath: string; data: Record<string, unknown> },
+	draft: LocalDraft,
 ): Promise<void> {
 	try {
 		const payload = { ...draft.data, status: "published" };
@@ -104,7 +101,7 @@ async function publishOne(
 
 async function publishAll(
 	config: { apiUrl: string; token?: string; repo: string },
-	drafts: Array<{ filePath: string; data: Record<string, unknown> }>,
+	drafts: LocalDraft[],
 ): Promise<void> {
 	let published = 0;
 	for (const draft of drafts) {

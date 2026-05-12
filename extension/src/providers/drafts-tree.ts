@@ -77,10 +77,12 @@ export class DraftsTreeProvider implements vscode.TreeDataProvider<DraftTreeNode
 	private timer: ReturnType<typeof setInterval> | null = null;
 
 	get draftCount(): number {
-		if (this.repo) {
-			return this.drafts.filter((d) => d.data.repo === this.repo).length;
-		}
-		return this.drafts.length;
+		return this.getVisibleDrafts().length;
+	}
+
+	getVisibleDrafts(): LocalDraft[] {
+		if (this.repo) return this.drafts.filter((d) => d.data.repo === this.repo);
+		return this.drafts;
 	}
 
 	constructor(private repo: string) {
