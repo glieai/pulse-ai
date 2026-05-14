@@ -399,6 +399,37 @@ if (MODE === "solo") {
 	);
 
 	// ═══════════════════════════════════════════════
+	// TOOL: pulse_supersede
+	// ═══════════════════════════════════════════════
+
+	server.tool(
+		"pulse_supersede",
+		"Mark an existing insight as superseded by a newer one. Both insights must exist " +
+			"and belong to the same org. The newer insight's supersedes_id will point to the older. " +
+			"Use this when a previously published decision was reverted or replaced — readers will see " +
+			"the chain in the UI and the search will hide the old one by default.",
+		{
+			old_id: z.string().uuid().describe("UUID of the insight being superseded (the older one)"),
+			new_id: z.string().uuid().describe("UUID of the insight that supersedes it (the newer one)"),
+			reason: z
+				.string()
+				.min(1)
+				.max(2000)
+				.describe("Why this replaces the old one (1-2 sentences, falsifiable if possible)"),
+		},
+		async ({ old_id, new_id, reason }) => {
+			try {
+				const res = await api.supersede({ old_id, new_id, reason });
+				return textResult(
+					`Linked: insight ${res.new_id} now supersedes ${res.old_id}.\nReason: ${res.reason}`,
+				);
+			} catch (e) {
+				return errorResult(`Supersede failed: ${(e as Error).message}`);
+			}
+		},
+	);
+
+	// ═══════════════════════════════════════════════
 	// TOOL: pulse_publish
 	// ═══════════════════════════════════════════════
 

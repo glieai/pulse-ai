@@ -176,4 +176,16 @@ export class PulseApiClient {
 			body: JSON.stringify({ repo }),
 		});
 	}
+
+	/** Link new_id as the supersession of old_id. Both must belong to caller's org. */
+	async supersede(opts: {
+		old_id: string;
+		new_id: string;
+		reason: string;
+	}): Promise<{ ok: boolean; old_id: string; new_id: string; reason: string }> {
+		return this.request("/insights/supersede", {
+			method: "POST",
+			body: JSON.stringify(opts),
+		});
+	}
 }
