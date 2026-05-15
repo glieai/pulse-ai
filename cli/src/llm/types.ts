@@ -1,4 +1,4 @@
-import type { InsightKind } from "@pulse/shared";
+import type { DuplicateCandidate, InsightKind } from "@pulse/shared";
 
 export interface InsightContext {
 	repo: string;
@@ -9,6 +9,12 @@ export interface InsightContext {
 	sourceFiles?: string[];
 	existingInsights?: string;
 	commitMessage?: string;
+	/**
+	 * Raw candidates returned by /context/related — kept alongside the
+	 * prompt-formatted `existingInsights` so the watcher can run a
+	 * pre-flight dedup check before invoking the LLM.
+	 */
+	relatedInsights?: DuplicateCandidate[];
 }
 
 export interface GeneratedInsight {

@@ -1,5 +1,5 @@
 import { hostname } from "node:os";
-import type { TriggerType } from "@pulse/shared";
+import { type TriggerType, findDuplicateBySourceFiles } from "@pulse/shared";
 import { loadConfig } from "../config";
 import { gatherContext } from "../context/gather";
 import { getActiveSessionInfo } from "../context/session";
@@ -9,6 +9,9 @@ import type { GeneratedInsight } from "../llm/types";
 import { banner, info, warn } from "../output";
 import { ask, closePrompt } from "../prompt";
 import { displayInsight, saveInsightDraft } from "./insight-shared";
+
+// Same threshold as the extension watcher — see watcher.ts for rationale.
+const DEDUP_JACCARD_THRESHOLD = 0.5;
 
 function parseTrigger(args: string[]): TriggerType {
 	for (const arg of args) {
@@ -42,6 +45,22 @@ export async function insightCommand(args: string[]): Promise<void> {
 		warn("No conversation transcript or git changes found.");
 		info("Start a coding session or make some changes first.");
 		return;
+	}
+
+	// Pre-flight dedup for automatic triggers only. Manual `pulse insight`
+	// always proceeds — the user explicitly invoked it.
+	if (trigger !== "manual" && context.sourceFiles?.length && context.relatedInsights?.length) {
+		const dup = findDuplicateBySourceFiles(
+			context.sourceFiles,
+			context.relatedInsights,
+			DEDUP_JACCARD_THRESHOLD,
+		);
+		if (dup) {
+			info(
+				`Skipped duplicate (jaccard=${dup.score.toFixed(2)}) — covered by "${dup.title}" [${dup.id.slice(0, 8)}]`,
+			);
+			return;
+		}
 	}
 
 	info(

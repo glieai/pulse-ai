@@ -124,6 +124,7 @@ export async function gatherContext(
 
 	// Fetch related insights — all signals combined (session, files, branch, keywords)
 	let existingInsights = "";
+	let relatedInsights: RelatedContextResult[] = [];
 	try {
 		const data = await client.getRelatedContext({
 			repo: configRepo || git.repo,
@@ -134,6 +135,7 @@ export async function gatherContext(
 			limit: 15,
 		});
 		if (data.insights.length > 0) {
+			relatedInsights = data.insights;
 			existingInsights = formatContextForPrompt(data.insights);
 		}
 	} catch {
@@ -149,5 +151,6 @@ export async function gatherContext(
 		sourceFiles: git.sourceFiles.length > 0 ? git.sourceFiles : undefined,
 		existingInsights: existingInsights || undefined,
 		commitMessage: git.commitMessage || undefined,
+		relatedInsights: relatedInsights.length > 0 ? relatedInsights : undefined,
 	};
 }

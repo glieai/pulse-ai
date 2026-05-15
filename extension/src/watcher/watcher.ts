@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { getAllActiveSessions, getSessionTitle } from "@pulse/cli/context/session";
-import { saveDraft } from "@pulse/shared";
+import { findDuplicateBySourceFiles, saveDraft } from "@pulse/shared";
 import type { InsightCreate } from "@pulse/shared";
 import * as vscode from "vscode";
 import type { PulseApiClient } from "../api/client";
@@ -22,6 +22,11 @@ interface WatcherPersistedState {
 }
 
 const STATE_KEY = "pulse.watcherState";
+
+// Skip generation when the changed file set overlaps an existing insight at
+// or above this Jaccard score. 0.5 catches "same 2 files" duplicates (the
+// dominant cluster shape we saw) while tolerating one-file edits as new.
+const DEDUP_JACCARD_THRESHOLD = 0.5;
 
 /**
  * VS Code watcher — monitors ALL active session files and auto-generates
@@ -275,6 +280,23 @@ export class PulseWatcher implements vscode.Disposable {
 		if (!context.transcript && !context.diff && !context.recentCommits) {
 			this.log("No context available — skipping");
 			return;
+		}
+
+		// Pre-flight dedup: if the changed files already match an existing
+		// insight, skip generation entirely. Stops the duplicate at the
+		// trigger — no LLM call, no draft, no API round-trip.
+		if (context.sourceFiles?.length && context.relatedInsights?.length) {
+			const dup = findDuplicateBySourceFiles(
+				context.sourceFiles,
+				context.relatedInsights,
+				DEDUP_JACCARD_THRESHOLD,
+			);
+			if (dup) {
+				this.log(
+					`Skipped duplicate (jaccard=${dup.score.toFixed(2)}) — covered by "${dup.title}" [${dup.id.slice(0, 8)}]`,
+				);
+				return;
+			}
 		}
 
 		const generated = await generateInsight(context);
