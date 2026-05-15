@@ -56,6 +56,10 @@ export interface Insight {
 	content_hash: string;
 	enrichment?: InsightEnrichment;
 	supersedes_id?: string;
+	// True when another insight in the same org has supersedes_id pointing here.
+	// Computed server-side in listInsights (EXISTS subquery). Optional because
+	// not every endpoint populates it.
+	superseded?: boolean;
 	created_at: string;
 }
 
