@@ -36,6 +36,8 @@ export {
 } from "./llm/enrichment-prompt";
 export { saveDraft, listDrafts, readDraft, deleteDraft, listAllDraftRepos } from "./drafts";
 export type { LocalDraft } from "./drafts";
+export { jaccardSimilarity, findDuplicateBySourceFiles } from "./dedup";
+export type { DuplicateCandidate, DuplicateMatch } from "./dedup";
 export {
 	SOLO_ORG_ID,
 	SOLO_ORG_NAME,

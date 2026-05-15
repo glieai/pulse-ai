@@ -52,6 +52,7 @@ export async function gatherContext(config: PulseConfig): Promise<InsightContext
 
 	// Fetch related insights — all signals combined (session, files, branch, keywords)
 	let existingInsights = "";
+	let relatedInsights: RelatedContextResult[] = [];
 	try {
 		const data = await apiPost<{ insights: RelatedContextResult[] }>(
 			config.apiUrl,
@@ -67,6 +68,7 @@ export async function gatherContext(config: PulseConfig): Promise<InsightContext
 			config.token,
 		);
 		if (data.insights.length > 0) {
+			relatedInsights = data.insights;
 			existingInsights = formatContextForPrompt(data.insights);
 		}
 	} catch {
@@ -81,5 +83,6 @@ export async function gatherContext(config: PulseConfig): Promise<InsightContext
 		recentCommits: git.recentCommits || undefined,
 		sourceFiles: git.sourceFiles.length > 0 ? git.sourceFiles : undefined,
 		existingInsights: existingInsights || undefined,
+		relatedInsights: relatedInsights.length > 0 ? relatedInsights : undefined,
 	};
 }
