@@ -13,9 +13,9 @@ import { join } from "node:path";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@pulse/cli/llm/prompt";
 import type { GeneratedInsight, InsightContext } from "@pulse/cli/llm/types";
 import * as vscode from "vscode";
-import { generateInsightDirect } from "./direct-provider";
+import { callLlmDirect, generateInsightDirect } from "./direct-provider";
 import { parseInsightResponse } from "./parse";
-import { generateInsightVscodeLm } from "./vscode-lm";
+import { callVscodeLm, generateInsightVscodeLm } from "./vscode-lm";
 
 /**
  * Find Claude Code CLI binary from the installed VS Code extension.
@@ -207,6 +207,63 @@ export class NoLlmError extends Error {
 
 function inferProvider(apiKey: string): "anthropic" | "openai" {
 	return apiKey.startsWith("sk-ant-") ? "anthropic" : "openai";
+}
+
+/**
+ * Call the available LLM with arbitrary system+user prompts and return the
+ * raw text output. Same waterfall as `generateInsight` (vscode.lm → Claude
+ * CLI → Codex CLI → manual API key) but generic — no schema parsing.
+ *
+ * Used by the gap-extraction pipeline, which runs one LLM call per
+ * human-intervention window with a focused prompt each time.
+ */
+export async function callLlm(systemPrompt: string, userPrompt: string): Promise<string> {
+	const config = vscode.workspace.getConfiguration("pulse");
+	const provider = config.get<string>("llmProvider") ?? "auto";
+	const apiKey = config.get<string>("llmApiKey") ?? "";
+	const model = config.get<string>("llmModel") || undefined;
+
+	if (provider === "anthropic" || provider === "openai") {
+		if (!apiKey) {
+			throw new Error(
+				`LLM provider set to "${provider}" but no API key configured. Set pulse.llmApiKey in VS Code settings.`,
+			);
+		}
+		return callLlmDirect(provider, apiKey, model, systemPrompt, userPrompt);
+	}
+
+	try {
+		return await callVscodeLm(systemPrompt, userPrompt);
+	} catch (err) {
+		console.warn(
+			`vscode.lm failed, trying next provider: ${err instanceof Error ? err.message : "unknown"}`,
+		);
+	}
+
+	const claudeBinary = findClaudeCodeBinary();
+	if (claudeBinary) {
+		try {
+			return await runClaudeCli(claudeBinary, systemPrompt, userPrompt, model);
+		} catch (err) {
+			console.warn(`Claude CLI failed: ${err instanceof Error ? err.message : "unknown"}`);
+		}
+	}
+
+	if (isCodexOnPath()) {
+		try {
+			// Codex CLI doesn't accept a separate system prompt — fold it into the user prompt.
+			return await runCodexCli(`${systemPrompt}\n\n---\n\n${userPrompt}`, model);
+		} catch (err) {
+			console.warn(`Codex CLI failed: ${err instanceof Error ? err.message : "unknown"}`);
+		}
+	}
+
+	if (apiKey) {
+		const inferred = inferProvider(apiKey);
+		return callLlmDirect(inferred, apiKey, model, systemPrompt, userPrompt);
+	}
+
+	throw new NoLlmError();
 }
 
 export async function generateInsight(context: InsightContext): Promise<GeneratedInsight> {

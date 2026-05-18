@@ -2,10 +2,14 @@ import { describe, expect, test } from "bun:test";
 import {
 	buildGapUserPrompt,
 	extractHumanInterventions,
+	gapResponseToInsightCreate,
+	generateGapInsights,
 	isNoiseMessage,
 	parseGapResponse,
 	parseTranscriptTurns,
+	sanitizeGapResponse,
 } from "./gap";
+import type { GapInsightResolved } from "./gap";
 
 describe("parseTranscriptTurns", () => {
 	test("parses alternating USER/ASSISTANT blocks", () => {
@@ -206,5 +210,175 @@ describe("parseGapResponse", () => {
 		expect(r).not.toBeNull();
 		if (!r || r.rejected) throw new Error("expected non-rejected");
 		expect(r.gap_type).toBe("methodology");
+	});
+});
+
+// Test fixture builder for sanitize/generate/mapper tests.
+function makeResolved(overrides: Partial<GapInsightResolved> = {}): GapInsightResolved {
+	return {
+		rejected: false,
+		title: "Sample gap",
+		gap_type: "domain",
+		ai_assumption: "AI was assuming the obvious default.",
+		human_contribution: "Human clarified the actual constraint.",
+		why_invisible_to_ai: "The constraint lives only in domain experts' heads.",
+		for_next_session: "Ask about the constraint up front.",
+		...overrides,
+	};
+}
+
+describe("sanitizeGapResponse", () => {
+	test("strips long quoted spans and records the concern", () => {
+		const input = makeResolved({
+			human_contribution: 'Said "this is a long verbatim quote we want stripped" with frustration.',
+		});
+		const { sanitized, privacyConcerns } = sanitizeGapResponse(input);
+		expect(sanitized.human_contribution).not.toContain("long verbatim quote");
+		expect(sanitized.human_contribution).toContain("[paraphrased]");
+		expect(privacyConcerns.some((c) => c.includes("quoted span"))).toBe(true);
+	});
+
+	test("strips ALL-CAPS runs", () => {
+		const input = makeResolved({ title: "Remove THIS LOUD SHOUTING from the title please" });
+		const { sanitized, privacyConcerns } = sanitizeGapResponse(input);
+		expect(sanitized.title).not.toContain("LOUD SHOUTING");
+		expect(privacyConcerns.some((c) => c.startsWith("title: caps run"))).toBe(true);
+	});
+
+	test("collapses repeated punctuation", () => {
+		const input = makeResolved({ for_next_session: "Just do it!!!! Now???" });
+		const { sanitized } = sanitizeGapResponse(input);
+		expect(sanitized.for_next_session).toBe("Just do it! Now?");
+	});
+
+	test("redacts profanity tokens", () => {
+		const input = makeResolved({ human_contribution: "Indicated that the previous fix was shit." });
+		const { sanitized, privacyConcerns } = sanitizeGapResponse(input);
+		expect(sanitized.human_contribution.toLowerCase()).not.toContain("shit");
+		expect(sanitized.human_contribution).toContain("[redacted]");
+		expect(privacyConcerns.some((c) => c.includes("profanity"))).toBe(true);
+	});
+
+	test("leaves clean input untouched and reports no concerns", () => {
+		const input = makeResolved();
+		const { sanitized, privacyConcerns } = sanitizeGapResponse(input);
+		expect(sanitized).toEqual(input);
+		expect(privacyConcerns).toEqual([]);
+	});
+});
+
+describe("generateGapInsights", () => {
+	test("processes every non-noise window and sanitises outputs", async () => {
+		const transcript = [
+			"[USER] kick-off — please build feature X",
+			"[ASSISTANT] starting work on X with default approach",
+			"[USER] no, use approach Y because the client requires Y",
+			"[ASSISTANT] switching to Y",
+			"[USER] ok",
+			"[ASSISTANT] noted",
+			"[USER] also: domain validation must happen on the server side",
+		].join("\n\n");
+
+		let callIdx = 0;
+		const responses = [
+			JSON.stringify(makeResolved({ title: "Use Y not default approach" })),
+			JSON.stringify(makeResolved({ title: "Domain validation belongs on the server" })),
+		];
+
+		const llm = async () => {
+			const r = responses[callIdx++ % responses.length];
+			return r;
+		};
+
+		const result = await generateGapInsights(llm, "system", transcript);
+		expect(result.captured.length).toBe(2);
+		expect(result.captured[0].response.title).toBe("Use Y not default approach");
+		expect(result.captured[1].response.title).toBe("Domain validation belongs on the server");
+		expect(result.rejected).toEqual([]);
+		expect(result.errors).toEqual([]);
+	});
+
+	test("records rejections from the LLM and parse failures separately", async () => {
+		const transcript = [
+			"[USER] kick-off",
+			"[ASSISTANT] A1",
+			"[USER] actually wait the constraint is different from what I said",
+			"[ASSISTANT] noted",
+			"[USER] one more thing: data residency is important",
+		].join("\n\n");
+
+		const outputs = [
+			JSON.stringify({ rejected: true, reason: "deemed redundant" }),
+			"not json at all",
+		];
+		let i = 0;
+		const llm = async () => outputs[i++ % outputs.length];
+
+		const result = await generateGapInsights(llm, "system", transcript);
+		expect(result.captured).toEqual([]);
+		expect(result.rejected).toHaveLength(1);
+		expect(result.rejected[0].reason).toBe("deemed redundant");
+		expect(result.errors).toHaveLength(1);
+		expect(result.errors[0].error).toContain("parse");
+	});
+
+	test("respects maxWindows by keeping the most recent N", async () => {
+		const transcript = [
+			"[USER] kick-off",
+			"[ASSISTANT] A1",
+			"[USER] first intervention with enough text to pass the noise filter",
+			"[ASSISTANT] noted A",
+			"[USER] second intervention with enough text to pass the noise filter",
+			"[ASSISTANT] noted B",
+			"[USER] third intervention with enough text to pass the noise filter",
+		].join("\n\n");
+
+		const seen: string[] = [];
+		const llm = async (_sys: string, user: string) => {
+			seen.push(user);
+			return JSON.stringify(makeResolved({ title: "x" }));
+		};
+
+		const result = await generateGapInsights(llm, "system", transcript, { maxWindows: 1 });
+		expect(result.captured).toHaveLength(1);
+		expect(seen[0]).toContain("third intervention");
+	});
+});
+
+describe("gapResponseToInsightCreate", () => {
+	test("maps fields into an InsightCreate of kind=gap", () => {
+		const gap = makeResolved({ title: "T", for_next_session: "Do X next time." });
+		const ic = gapResponseToInsightCreate(gap, {
+			repo: "manager",
+			branch: "main",
+			triggerType: "size",
+			sourceFiles: ["a.ts"],
+		});
+		expect(ic.kind).toBe("gap");
+		expect(ic.title).toBe("T");
+		expect(ic.body).toBe("Do X next time.");
+		expect(ic.structured?.gap_type).toBe("domain");
+		expect(ic.structured?.ai_assumption).toBe("AI was assuming the obvious default.");
+		expect(ic.repo).toBe("manager");
+		expect(ic.branch).toBe("main");
+		expect(ic.trigger_type).toBe("size");
+		expect(ic.source_files).toEqual(["a.ts"]);
+		expect(ic.status).toBe("draft");
+	});
+
+	test("includes privacy_concerns in structured when provided", () => {
+		const gap = makeResolved();
+		const ic = gapResponseToInsightCreate(gap, {
+			repo: "x",
+			triggerType: "manual",
+			privacyConcerns: ["title: caps run redacted"],
+		});
+		expect(ic.structured?.privacy_concerns).toEqual(["title: caps run redacted"]);
+	});
+
+	test("omits privacy_concerns when empty/undefined", () => {
+		const gap = makeResolved();
+		const ic = gapResponseToInsightCreate(gap, { repo: "x", triggerType: "manual" });
+		expect(ic.structured?.privacy_concerns).toBeUndefined();
 	});
 });

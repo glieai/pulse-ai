@@ -93,13 +93,30 @@ export async function generateInsightDirect(
 	model: string | undefined,
 	context: InsightContext,
 ): Promise<GeneratedInsight> {
-	const resolvedModel = model || DEFAULT_MODELS[provider];
-	const userPrompt = buildUserPrompt(context);
-
-	const rawText =
-		provider === "anthropic"
-			? await callAnthropic(apiKey, resolvedModel, SYSTEM_PROMPT, userPrompt)
-			: await callOpenAI(apiKey, resolvedModel, SYSTEM_PROMPT, userPrompt);
-
+	const rawText = await callLlmDirect(
+		provider,
+		apiKey,
+		model,
+		SYSTEM_PROMPT,
+		buildUserPrompt(context),
+	);
 	return parseInsightResponse(rawText);
+}
+
+/**
+ * Lower-level: call the direct API with arbitrary system+user prompts.
+ * Used by the gap-extraction pipeline where each window has its own
+ * prompt pair.
+ */
+export async function callLlmDirect(
+	provider: "anthropic" | "openai",
+	apiKey: string,
+	model: string | undefined,
+	systemPrompt: string,
+	userPrompt: string,
+): Promise<string> {
+	const resolvedModel = model || DEFAULT_MODELS[provider];
+	return provider === "anthropic"
+		? callAnthropic(apiKey, resolvedModel, systemPrompt, userPrompt)
+		: callOpenAI(apiKey, resolvedModel, systemPrompt, userPrompt);
 }

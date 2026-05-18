@@ -48,11 +48,21 @@ async function selectModel(): Promise<vscode.LanguageModelChat> {
  * Uses whatever LLM the user has available (Copilot, Claude Code, etc.)
  */
 export async function generateInsightVscodeLm(context: InsightContext): Promise<GeneratedInsight> {
+	const fullText = await callVscodeLm(SYSTEM_PROMPT, buildUserPrompt(context));
+	return parseInsightResponse(fullText);
+}
+
+/**
+ * Lower-level: call the vscode.lm API with arbitrary system+user prompts and
+ * return the raw model output. Used by gap-extraction where each window has
+ * its own prompt pair.
+ */
+export async function callVscodeLm(systemPrompt: string, userPrompt: string): Promise<string> {
 	const model = await selectModel();
 
 	const messages = [
-		vscode.LanguageModelChatMessage.User(SYSTEM_PROMPT),
-		vscode.LanguageModelChatMessage.User(buildUserPrompt(context)),
+		vscode.LanguageModelChatMessage.User(systemPrompt),
+		vscode.LanguageModelChatMessage.User(userPrompt),
 	];
 
 	const response = await model.sendRequest(messages, {
@@ -60,12 +70,9 @@ export async function generateInsightVscodeLm(context: InsightContext): Promise<
 			"Pulse uses LLM to generate development knowledge insights from your coding session.",
 	});
 
-	// Collect streaming response
 	const parts: string[] = [];
 	for await (const fragment of response.text) {
 		parts.push(fragment);
 	}
-
-	const fullText = parts.join("");
-	return parseInsightResponse(fullText);
+	return parts.join("");
 }
