@@ -13,7 +13,7 @@
  * `[ASSISTANT] ...` blocks separated by blank lines.
  */
 
-import type { GapInsightStructured, GapType } from "../types/insight";
+import type { GapInsightStructured, GapType, InsightCreate, TriggerType } from "../types/insight";
 
 // ─── Types ────────────────────────────────────────
 
@@ -230,5 +230,188 @@ export function parseGapResponse(raw: string): GapResponse | null {
 		human_contribution,
 		why_invisible_to_ai,
 		for_next_session,
+	};
+}
+
+// ─── Privacy guard ────────────────────────────────
+
+/**
+ * Patterns that often signal a verbatim leak of the human's voice — the
+ * privacy rule says the insight is the abstraction, not the words. We strip
+ * these post-LLM as a belt-and-braces guard; the prompt also asks the model
+ * to avoid them in the first place.
+ */
+const VERBATIM_QUOTED_RE = /['"`«»][^'"`«»]{12,}['"`«»]/g;
+const CAPS_RUN_RE = /\b[A-Z]{5,}(?:\s+[A-Z]{2,}){0,5}\b/g;
+const REPEATED_PUNCT_RE = /([!?]){2,}/g;
+const LAUGHTER_RE = /\b(k{4,}|h{4,}|a{4,}|j{4,})\b/gi;
+const PROFANITY_RE =
+	/\b(porra|caralho|merda|fds|wtf|fuck(?:ing)?|shit|fodasse|fodase|foda-se|cabrão|cabrao|puta)\b/gi;
+
+export type GapInsightResolved = Extract<GapResponse, { rejected: false }>;
+
+export interface SanitizationResult {
+	sanitized: GapInsightResolved;
+	privacyConcerns: string[];
+}
+
+/**
+ * Strip likely-verbatim spans (quoted strings, ALL-CAPS runs, repeated
+ * punctuation, profanity) from every text field of a non-rejected gap
+ * response. Returns the cleaned response plus a list of human-readable
+ * notes about what was redacted — the caller can store these on the
+ * draft so a human reviewer can spot suspect outputs.
+ */
+export function sanitizeGapResponse(response: GapInsightResolved): SanitizationResult {
+	const concerns: string[] = [];
+
+	const sanitize = (input: string, field: string): string => {
+		let out = input;
+		out = out.replace(VERBATIM_QUOTED_RE, () => {
+			concerns.push(`${field}: quoted span redacted`);
+			return "[paraphrased]";
+		});
+		out = out.replace(CAPS_RUN_RE, (m) => {
+			concerns.push(`${field}: caps run redacted (“${m.slice(0, 24)}”)`);
+			return "[paraphrased]";
+		});
+		out = out.replace(REPEATED_PUNCT_RE, "$1");
+		out = out.replace(LAUGHTER_RE, "");
+		out = out.replace(PROFANITY_RE, () => {
+			concerns.push(`${field}: profanity redacted`);
+			return "[redacted]";
+		});
+		// Collapse any runs of whitespace introduced by redactions
+		out = out.replace(/\s{2,}/g, " ").trim();
+		return out;
+	};
+
+	const sanitized: GapInsightResolved = {
+		...response,
+		title: sanitize(response.title, "title"),
+		ai_assumption: sanitize(response.ai_assumption, "ai_assumption"),
+		human_contribution: sanitize(response.human_contribution, "human_contribution"),
+		why_invisible_to_ai: sanitize(response.why_invisible_to_ai, "why_invisible_to_ai"),
+		for_next_session: sanitize(response.for_next_session, "for_next_session"),
+	};
+
+	return { sanitized, privacyConcerns: concerns };
+}
+
+// ─── Multi-window generation ──────────────────────
+
+/** Provider abstraction: a function that, given system+user prompts, returns raw LLM text. */
+export type LlmCall = (systemPrompt: string, userPrompt: string) => Promise<string>;
+
+export interface GapGenerationOptions {
+	maxWindows?: number; // upper bound on LLM calls per generation; default unlimited
+	onProgress?: (idx: number, total: number) => void;
+}
+
+export interface GapCaptureOutcome {
+	window: InterventionWindow;
+	response: GapInsightResolved;
+	privacyConcerns: string[];
+}
+
+export interface GapRejectOutcome {
+	window: InterventionWindow;
+	reason: string;
+}
+
+export interface GapErrorOutcome {
+	window: InterventionWindow;
+	error: string;
+}
+
+export interface GapGenerationResult {
+	captured: GapCaptureOutcome[];
+	rejected: GapRejectOutcome[];
+	errors: GapErrorOutcome[];
+}
+
+/**
+ * Run gap extraction across every human-intervention window in a transcript.
+ * Sequential by design — provider call rate-limits and retry semantics live
+ * inside the LlmCall implementation, not here.
+ */
+export async function generateGapInsights(
+	llm: LlmCall,
+	systemPrompt: string,
+	transcript: string,
+	opts: GapGenerationOptions = {},
+): Promise<GapGenerationResult> {
+	const turns = parseTranscriptTurns(transcript);
+	let windows = extractHumanInterventions(turns);
+	if (opts.maxWindows !== undefined && windows.length > opts.maxWindows) {
+		// Process the most recent N — older windows have likely been captured
+		// in prior generations and the DB content_hash will dedupe regardless.
+		windows = windows.slice(-opts.maxWindows);
+	}
+
+	const captured: GapCaptureOutcome[] = [];
+	const rejected: GapRejectOutcome[] = [];
+	const errors: GapErrorOutcome[] = [];
+
+	for (let i = 0; i < windows.length; i++) {
+		const w = windows[i];
+		opts.onProgress?.(i + 1, windows.length);
+		try {
+			const raw = await llm(systemPrompt, buildGapUserPrompt(w));
+			const parsed = parseGapResponse(raw);
+			if (!parsed) {
+				errors.push({ window: w, error: "could not parse LLM response" });
+				continue;
+			}
+			if (parsed.rejected) {
+				rejected.push({ window: w, reason: parsed.reason });
+				continue;
+			}
+			const { sanitized, privacyConcerns } = sanitizeGapResponse(parsed);
+			captured.push({ window: w, response: sanitized, privacyConcerns });
+		} catch (err) {
+			errors.push({ window: w, error: err instanceof Error ? err.message : String(err) });
+		}
+	}
+
+	return { captured, rejected, errors };
+}
+
+// ─── Insight create mapper ────────────────────────
+
+export interface GapInsightCreateContext {
+	repo: string;
+	branch?: string;
+	triggerType: TriggerType;
+	sourceFiles?: string[];
+	sessionRefs?: Record<string, unknown>[];
+	privacyConcerns?: string[];
+}
+
+/** Map a sanitized gap response into the shape the API/draft store accepts. */
+export function gapResponseToInsightCreate(
+	gap: GapInsightResolved,
+	ctx: GapInsightCreateContext,
+): InsightCreate {
+	const structured: Record<string, unknown> = {
+		gap_type: gap.gap_type,
+		ai_assumption: gap.ai_assumption,
+		human_contribution: gap.human_contribution,
+		why_invisible_to_ai: gap.why_invisible_to_ai,
+	};
+	if (ctx.privacyConcerns && ctx.privacyConcerns.length > 0) {
+		structured.privacy_concerns = ctx.privacyConcerns;
+	}
+	return {
+		kind: "gap",
+		title: gap.title,
+		body: gap.for_next_session,
+		structured,
+		repo: ctx.repo,
+		branch: ctx.branch,
+		source_files: ctx.sourceFiles,
+		session_refs: ctx.sessionRefs,
+		trigger_type: ctx.triggerType,
+		status: "draft",
 	};
 }
