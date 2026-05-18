@@ -10,6 +10,7 @@
 		progress: "bg-warning/10 text-warning",
 		context: "bg-text-secondary/10 text-text-secondary",
 		business: "bg-purple-500/10 text-purple-400",
+		gap: "bg-accent/15 text-accent",
 	};
 </script>
 
