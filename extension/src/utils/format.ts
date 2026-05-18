@@ -37,6 +37,7 @@ export function kindLabel(kind: InsightKind): string {
 		context: "Context",
 		progress: "Progress",
 		business: "Business",
+		gap: "Gap",
 	};
 	return labels[kind] ?? kind;
 }
@@ -50,6 +51,7 @@ export function kindIcon(kind: InsightKind): vscode.ThemeIcon {
 		context: "info",
 		progress: "check",
 		business: "briefcase",
+		gap: "comment-discussion",
 	};
 	return new vscode.ThemeIcon(icons[kind] ?? "circle-outline");
 }

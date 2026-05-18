@@ -1,4 +1,6 @@
 export type {
+	GapInsightStructured,
+	GapType,
 	Insight,
 	InsightCreate,
 	InsightEnrichment,
@@ -24,7 +26,19 @@ export type {
 	User,
 	UserRole,
 } from "./types/org";
-export { INSIGHT_SYSTEM_PROMPT } from "./llm/prompt";
+export { GAP_INSIGHT_SYSTEM_PROMPT, INSIGHT_SYSTEM_PROMPT } from "./llm/prompt";
+export {
+	buildGapUserPrompt,
+	extractHumanInterventions,
+	isNoiseMessage,
+	parseGapResponse,
+	parseTranscriptTurns,
+} from "./llm/gap";
+export type {
+	GapResponse,
+	InterventionWindow,
+	TranscriptTurn,
+} from "./llm/gap";
 export {
 	ASK_SYSTEM_PROMPT,
 	buildAskUserPrompt,

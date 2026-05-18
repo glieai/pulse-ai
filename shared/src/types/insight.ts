@@ -1,4 +1,38 @@
-export type InsightKind = "decision" | "dead_end" | "pattern" | "context" | "progress" | "business";
+export type InsightKind =
+	| "decision"
+	| "dead_end"
+	| "pattern"
+	| "context"
+	| "progress"
+	| "business"
+	| "gap";
+
+/**
+ * Categories of asymmetric information that surface when a human intervenes
+ * during a vibecoding session. Stored under `structured.gap_type` on
+ * insights whose `kind === "gap"`.
+ */
+export type GapType =
+	| "domain"
+	| "business"
+	| "strategic"
+	| "past-learning"
+	| "preference"
+	| "ambiguity"
+	| "methodology";
+
+/**
+ * Structured payload for gap insights. The body of a gap insight is the
+ * `for_next_session` field — the rest live here so they can be queried,
+ * filtered, and rendered separately. NEVER include the human's verbatim
+ * words; only the substance of the intervention. See GAP_INSIGHT_SYSTEM_PROMPT.
+ */
+export interface GapInsightStructured {
+	gap_type: GapType;
+	ai_assumption: string;
+	human_contribution: string;
+	why_invisible_to_ai: string;
+}
 
 export type InsightStatus = "draft" | "published";
 
