@@ -49,12 +49,6 @@
 					"default": 5000,
 					"minimum": 1000,
 					"description": "How often to check session file size (in ms)"
-				},
-				"pulse.insightMode": {
-					"type": "string",
-					"enum": ["legacy", "gap", "both"],
-					"default": "legacy",
-					"description": "How the watcher generates drafts. 'legacy' = one summary insight per trigger (current behaviour). 'gap' = one insight per moment where the human intervened in the AI's work (new model — see https://pulse.glie.ai/docs/gap-extraction). 'both' = run both pipelines."
 				}
 			}
 		},
