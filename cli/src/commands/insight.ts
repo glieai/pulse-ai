@@ -1,20 +1,14 @@
 import { hostname } from "node:os";
-import {
-	GAP_INSIGHT_SYSTEM_PROMPT,
-	type InsightCreate,
-	type TriggerType,
-	findDuplicateBySourceFiles,
-	gapResponseToInsightCreate,
-	generateGapInsights,
-} from "@pulse/shared";
+import { type TriggerType, findDuplicateBySourceFiles } from "@pulse/shared";
 import { loadConfig } from "../config";
 import { gatherContext } from "../context/gather";
 import { getActiveSessionInfo } from "../context/session";
-import { apiPost } from "../http";
 import { getProviderWithSetup } from "../llm/provider";
 import { resolveLlmConfig } from "../llm/resolve-provider";
-import { banner, info, success, warn } from "../output";
-import { closePrompt } from "../prompt";
+import type { GeneratedInsight } from "../llm/types";
+import { banner, info, warn } from "../output";
+import { ask, closePrompt } from "../prompt";
+import { displayInsight, saveInsightDraft } from "./insight-shared";
 
 // Same threshold as the extension watcher — see watcher.ts for rationale.
 const DEDUP_JACCARD_THRESHOLD = 0.5;
@@ -72,46 +66,53 @@ export async function insightCommand(args: string[]): Promise<void> {
 	info(
 		`Context: ${context.transcript ? "transcript" : "no transcript"}, ${context.diff ? "diff" : "no diff"}, ${context.recentCommits ? "commits" : "no commits"}`,
 	);
-
-	if (!context.transcript) {
-		warn("No transcript — nothing to extract.");
-		closePrompt();
-		return;
-	}
+	info("Generating insight via LLM...");
 
 	const provider = await getProviderWithSetup(llmConfig);
+	let insight: GeneratedInsight;
+
+	try {
+		insight = await provider.generateInsight(context);
+	} catch (err) {
+		throw new Error(`LLM generation failed: ${err instanceof Error ? err.message : "unknown"}`);
+	}
+
+	displayInsight(insight);
+
+	let approved: boolean;
+	if (nonInteractive) {
+		approved = true;
+		info("Auto-approved (non-interactive mode)");
+	} else {
+		const answer = await ask("Save draft? (y/n)", "y");
+		approved = answer.toLowerCase() === "y";
+
+		if (!approved) {
+			warn("Insight discarded.");
+			closePrompt();
+			return;
+		}
+	}
+
 	const sessionInfo = getActiveSessionInfo(process.cwd());
 	const sessionRefs = sessionInfo
 		? [{ session_id: sessionInfo.sessionId, device: hostname(), tool: "cli" }]
 		: undefined;
 
-	info("Extracting gaps from transcript windows...");
-	const result = await generateGapInsights(
-		(systemPrompt, userPrompt) => provider.generate(systemPrompt, userPrompt),
-		GAP_INSIGHT_SYSTEM_PROMPT,
-		context.transcript,
-		{
-			onProgress: (idx, total) => info(`  gap ${idx}/${total}…`),
-		},
-	);
-	for (const { response, privacyConcerns } of result.captured) {
-		const payload: InsightCreate = gapResponseToInsightCreate(response, {
-			repo: config.repo,
-			branch: context.branch,
-			triggerType: trigger,
-			sourceFiles: context.sourceFiles,
-			sessionRefs,
-			privacyConcerns,
-		});
-		await apiPost(config.apiUrl, "/insights", payload, config.token);
+	try {
+		await saveInsightDraft(
+			config,
+			insight,
+			{
+				branch: context.branch,
+				triggerType: trigger,
+				sessionRefs,
+			},
+			provider,
+		);
+	} catch (err) {
+		throw new Error(`Failed to save draft: ${err instanceof Error ? err.message : "unknown"}`);
 	}
-	success(
-		`Gaps captured: ${result.captured.length} · rejected: ${result.rejected.length} · errors: ${result.errors.length}`,
-	);
-
-	// Suppress unused-variable warning during transition — nonInteractive still
-	// parsed for backwards compat with hooks that pass --non-interactive.
-	void nonInteractive;
 
 	closePrompt();
 }

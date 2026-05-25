@@ -10,7 +10,6 @@
 		progress: "Milestone",
 		context: "Context",
 		business: "Business constraint",
-		gap: "Information gap closed by human",
 	};
 
 	/** Known fields per kind — everything else goes to fallback */
@@ -21,7 +20,6 @@
 		progress: ["milestone", "deliverables"],
 		context: ["summary"],
 		business: ["problem", "constraints", "drove_decisions"],
-		gap: ["gap_type", "ai_assumption", "human_contribution", "why_invisible_to_ai"],
 	};
 
 	const extraFields = $derived(

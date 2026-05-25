@@ -1,17 +1,12 @@
 import { execSync } from "node:child_process";
 import { getAllActiveSessions, getSessionTitle } from "@pulse/cli/context/session";
-import {
-	GAP_INSIGHT_SYSTEM_PROMPT,
-	findDuplicateBySourceFiles,
-	gapResponseToInsightCreate,
-	generateGapInsights,
-	saveDraft,
-} from "@pulse/shared";
+import { findDuplicateBySourceFiles, saveDraft } from "@pulse/shared";
+import type { InsightCreate } from "@pulse/shared";
 import * as vscode from "vscode";
 import type { PulseApiClient } from "../api/client";
 import type { PulseExtensionConfig } from "../config";
 import { gatherContext } from "../context/gather";
-import { callLlm } from "../llm/generate";
+import { generateInsight } from "../llm/generate";
 import type { DraftsTreeProvider } from "../providers/drafts-tree";
 import type { WatcherTreeProvider } from "../providers/watcher-tree";
 
@@ -304,35 +299,24 @@ export class PulseWatcher implements vscode.Disposable {
 			}
 		}
 
-		if (!context.transcript) {
-			this.log("No transcript — skipping (gap extraction requires conversation history)");
-			return;
-		}
+		const generated = await generateInsight(context);
 
-		const result = await generateGapInsights(
-			(systemPrompt, userPrompt) => callLlm(systemPrompt, userPrompt),
-			GAP_INSIGHT_SYSTEM_PROMPT,
-			context.transcript,
-		);
-		for (const { response, privacyConcerns } of result.captured) {
-			const data = gapResponseToInsightCreate(response, {
-				repo: context.repo,
-				branch: context.branch,
-				triggerType,
-				sourceFiles: context.sourceFiles,
-				privacyConcerns,
-			});
-			saveDraft(data);
-		}
-		if (result.captured.length > 0) this.draftsTree.refresh();
-		this.log(
-			`Gap drafts (${triggerType}): ${result.captured.length} captured · ${result.rejected.length} rejected · ${result.errors.length} errors`,
-		);
-		if (result.captured.length > 0) {
-			vscode.window.showInformationMessage(
-				`Pulse Watcher: ${result.captured.length} gap${result.captured.length === 1 ? "" : "s"} captured`,
-			);
-		}
+		const data: InsightCreate = {
+			kind: generated.kind,
+			title: generated.title,
+			body: generated.body,
+			structured: generated.structured,
+			repo: context.repo,
+			branch: context.branch,
+			source_files: generated.sourceFiles,
+			trigger_type: triggerType,
+			status: "draft",
+		};
+
+		saveDraft(data);
+		this.draftsTree.refresh();
+		this.log(`Draft saved (${triggerType}): "${generated.title}"`);
+		vscode.window.showInformationMessage(`Pulse Watcher: Draft — "${generated.title}"`);
 	}
 
 	private getCurrentCommitHash(cwd: string): string {

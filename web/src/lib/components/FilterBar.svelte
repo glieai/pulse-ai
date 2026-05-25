@@ -18,7 +18,6 @@
 		"context",
 		"progress",
 		"business",
-		"gap",
 	];
 
 	const activeKind = $derived(page.url.searchParams.get("kind") as InsightKind | null);
@@ -70,10 +69,6 @@
 		business: {
 			active: "bg-purple-500 text-white",
 			inactive: "bg-purple-500/8 text-purple-400 hover:bg-purple-500/15",
-		},
-		gap: {
-			active: "bg-accent text-white",
-			inactive: "bg-accent/8 text-accent hover:bg-accent/15",
 		},
 	};
 </script>

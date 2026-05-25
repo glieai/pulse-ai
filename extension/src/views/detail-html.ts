@@ -7,7 +7,6 @@ const KIND_COLORS: Record<InsightKind, string> = {
 	context: "#60a5fa",
 	progress: "#34d399",
 	business: "#fbbf24",
-	gap: "#7cc4ff",
 };
 
 function escapeHtml(str: string): string {
