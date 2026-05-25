@@ -88,7 +88,22 @@ export async function promptLlmSetup(): Promise<boolean> {
 	switch (choice.action) {
 		case "signin-claude": {
 			if (claudeExtension) {
-				await vscode.commands.executeCommand("claude-code.focus");
+				// Try the current command name (v2.1+); fall back to the legacy
+				// one and finally to a generic info message if neither exists.
+				const candidates = ["claude-vscode.focus", "claude-code.focus"];
+				let focused = false;
+				for (const cmd of candidates) {
+					try {
+						await vscode.commands.executeCommand(cmd);
+						focused = true;
+						break;
+					} catch {}
+				}
+				if (!focused) {
+					vscode.window.showInformationMessage(
+						"Open the Claude Code panel and sign in, then retry Pulse.",
+					);
+				}
 			} else {
 				vscode.window.showInformationMessage(
 					"Run 'claude' in your terminal — it will prompt you to sign in. Then retry.",
