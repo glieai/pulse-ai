@@ -1,14 +1,6 @@
 import { z } from "zod";
 
-const insightKind = z.enum([
-	"decision",
-	"dead_end",
-	"pattern",
-	"context",
-	"progress",
-	"business",
-	"gap",
-]);
+const insightKind = z.enum(["decision", "dead_end", "pattern", "context", "progress", "business"]);
 const insightStatus = z.enum(["draft", "published"]);
 const triggerType = z.enum(["commit", "size", "manual", "push", "api"]);
 
