@@ -1,4 +1,21 @@
 /**
+ * Special title emitted by the LLM when it cannot find any substantive human
+ * intervention in the session transcript. The watcher/CLI filter checks for
+ * this exact string and silently drops the insight rather than saving it —
+ * see Rule #7 in INSIGHT_SYSTEM_PROMPT. Case-insensitive prefix match in
+ * isNoSignificantContribution() so minor LLM rewording still gets filtered.
+ */
+export const NO_SIGNIFICANT_CONTRIBUTION_TITLE = "no significant human contribution";
+
+/**
+ * True if the LLM marked this insight as having no real human contribution.
+ * Such insights MUST be dropped before saving — see Rule #7.
+ */
+export function isNoSignificantContribution(title: string): boolean {
+	return title.trim().toLowerCase().startsWith(NO_SIGNIFICANT_CONTRIBUTION_TITLE);
+}
+
+/**
  * Shared system prompt for insight generation.
  *
  * This is the "DNA" of what makes a good Pulse insight.
@@ -71,7 +88,7 @@ Pick the one that fits the human contribution best:
 4. **Body length:** 400–1500 chars. Shorter than 300 is too thin; longer than 1500 is bloat.
 5. **No project/repo prefix in title** — that's separate metadata.
 6. **If existing insights are provided, do NOT repeat them.** Find a different gap.
-7. **If the conversation has no real human intervention** (just AI narrating its own work), output \`{ "kind": "progress", "title": "no significant human contribution", "body": "..." }\` and the dedup layer will drop it. Better to emit a low-signal insight that gets filtered than to fabricate substance.
+7. **Before claiming there's no human intervention, prove it.** Re-scan every human message in the transcript. The default assumption is that any human message over 30 characters that contains "no", "but", "actually", "wait", "espera", "mas", or names a constraint/principle/person IS an intervention. ONLY emit \`{ "kind": "progress", "title": "no significant human contribution", "body": "..." }\` if you can enumerate (in the body) the human messages you examined and articulate why EACH ONE is a pure confirmation, unblock, scheduling, or typo correction. If you find ONE substantive correction, pick that as the insight — do not collapse a session of corrections into a "no significant" marker. The downstream filter drops this special marker; if you emit it wrongly, real intervention is lost forever.
 
 ## Output format
 
