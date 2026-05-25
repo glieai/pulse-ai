@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { getAllActiveSessions, getSessionTitle } from "@pulse/cli/context/session";
-import { findDuplicateBySourceFiles, saveDraft } from "@pulse/shared";
+import { findDuplicateBySourceFiles, isNoSignificantContribution, saveDraft } from "@pulse/shared";
 import type { InsightCreate } from "@pulse/shared";
 import * as vscode from "vscode";
 import type { PulseApiClient } from "../api/client";
@@ -300,6 +300,15 @@ export class PulseWatcher implements vscode.Disposable {
 		}
 
 		const generated = await generateInsight(context);
+
+		// Skip the special "no significant human contribution" marker — the
+		// LLM emits it when it can't find a real intervention in the
+		// transcript. Saving it would pollute the feed (see Rule #7 in
+		// INSIGHT_SYSTEM_PROMPT).
+		if (isNoSignificantContribution(generated.title)) {
+			this.log(`Skipped (${triggerType}): no significant human contribution detected`);
+			return;
+		}
 
 		const data: InsightCreate = {
 			kind: generated.kind,

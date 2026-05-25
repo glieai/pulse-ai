@@ -1,5 +1,9 @@
 import { hostname } from "node:os";
-import { type TriggerType, findDuplicateBySourceFiles } from "@pulse/shared";
+import {
+	type TriggerType,
+	findDuplicateBySourceFiles,
+	isNoSignificantContribution,
+} from "@pulse/shared";
 import { loadConfig } from "../config";
 import { gatherContext } from "../context/gather";
 import { getActiveSessionInfo } from "../context/session";
@@ -75,6 +79,13 @@ export async function insightCommand(args: string[]): Promise<void> {
 		insight = await provider.generateInsight(context);
 	} catch (err) {
 		throw new Error(`LLM generation failed: ${err instanceof Error ? err.message : "unknown"}`);
+	}
+
+	// Drop the no-contribution marker — see Rule #7 in INSIGHT_SYSTEM_PROMPT.
+	if (isNoSignificantContribution(insight.title)) {
+		warn("No significant human contribution found in this session — nothing to save.");
+		closePrompt();
+		return;
 	}
 
 	displayInsight(insight);

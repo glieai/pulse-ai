@@ -24,7 +24,11 @@ export type {
 	User,
 	UserRole,
 } from "./types/org";
-export { INSIGHT_SYSTEM_PROMPT } from "./llm/prompt";
+export {
+	INSIGHT_SYSTEM_PROMPT,
+	NO_SIGNIFICANT_CONTRIBUTION_TITLE,
+	isNoSignificantContribution,
+} from "./llm/prompt";
 export {
 	ASK_SYSTEM_PROMPT,
 	buildAskUserPrompt,
