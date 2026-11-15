@@ -1,0 +1,97 @@
+# A copy of glieai/.github's release-source.yml, kept in this repository because it is public: GitHub
+# does not run a workflow from a private repository (the org's .github) on a public one, so the org
+# ruleset "main accepts releases only" cannot reach here. This repository's own ruleset, "main
+# accepts releases only (public)", requires the two jobs below instead. Keep the two copies equal.
+#
+# The git flow: work lands on `dev` (directly or through a pull request), and `main` takes pull requests only:
+#   - from `release/*`, cut from `dev`. A `dev -> main` PR picks up every new merge into `dev` and restarts its CI
+#     each time; a release branch is frozen, so its CI runs once.
+#   - from `hotfix/*`, for an urgent fix straight onto `main`. The fix then goes back into `dev` as well.
+#
+# "Cut from dev" is checked, not only the name: a release branch may carry nothing that is on neither `dev` nor
+# `main`. Merging `main` or `dev` into it is fine (that brings only commits already on one of them); a fix
+# committed on the release branch itself is not. It goes to `dev`, and the release is cut again.
+#
+# The name check runs only when the rule is broken, and then fails. A skipped job counts as a pass, so a hotfix
+# costs no runner time; a release runs the origin check, which reads two comparisons from the API.
+name: Release source
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  release-source:
+    name: main accepts release/* and hotfix/* only
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.base_ref == 'main' &&
+      !startsWith(github.head_ref, 'release/') &&
+      !startsWith(github.head_ref, 'hotfix/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse the source branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          echo "::error::main accepts pull requests from release/* or hotfix/* only, and this one comes from '$HEAD_REF'."
+          echo "Cut a release from dev:  git switch -c release/<version> origin/dev && git push -u origin HEAD"
+          echo "then open the pull request from that branch into main."
+          exit 1
+
+  release-origin:
+    name: a release carries only what is on dev
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.base_ref == 'main' &&
+      startsWith(github.head_ref, 'release/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Compare the release with dev and main
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const head = context.payload.pull_request.head.sha;
+
+            // The commits on the release branch that a base does not have. The API lists up to 250; a longer
+            // list cannot be checked, and a release that size is refused rather than waved through.
+            async function missingFrom(base) {
+              const { data } = await github.rest.repos.compareCommitsWithBasehead({
+                owner,
+                repo,
+                basehead: `${base}...${head}`,
+                per_page: 250,
+              });
+              if (data.total_commits > data.commits.length) {
+                throw new Error(
+                  `${data.total_commits} commits on this branch are not on ${base}, more than can be checked.`,
+                );
+              }
+              return data.commits;
+            }
+
+            const notOnMain = new Set((await missingFrom("main")).map((c) => c.sha));
+            // Merge commits only join what is already there (main into the release, dev into the release),
+            // so the check is about the commits that carry changes.
+            const strays = (await missingFrom("dev")).filter(
+              (c) => notOnMain.has(c.sha) && c.parents.length === 1,
+            );
+
+            if (strays.length > 0) {
+              for (const c of strays) {
+                core.error(`${c.sha.slice(0, 8)} ${c.commit.message.split("\n")[0]}`);
+              }
+              core.setFailed(
+                `This release carries ${strays.length} commit(s) that are on neither dev nor main. ` +
+                  "Release branches are cut from dev and take no work of their own: land the change on dev, " +
+                  "then cut the release again (or merge dev into this branch).",
+              );
+              return;
+            }
+            core.info("Every change on this release is already on dev or main.");
