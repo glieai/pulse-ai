@@ -10,7 +10,7 @@ describe("getAnthropicKey", () => {
 		if (originalKey !== undefined) {
 			process.env.ANTHROPIC_API_KEY = originalKey;
 		} else {
-			process.env.ANTHROPIC_API_KEY = undefined;
+			Reflect.deleteProperty(process.env, "ANTHROPIC_API_KEY");
 		}
 	});
 
@@ -20,7 +20,7 @@ describe("getAnthropicKey", () => {
 	});
 
 	test("returns undefined when env var is not set", () => {
-		process.env.ANTHROPIC_API_KEY = undefined;
+		Reflect.deleteProperty(process.env, "ANTHROPIC_API_KEY");
 		expect(getAnthropicKey()).toBeUndefined();
 	});
 });
@@ -32,7 +32,7 @@ describe("getOpenAIKey", () => {
 		if (originalKey !== undefined) {
 			process.env.OPENAI_API_KEY = originalKey;
 		} else {
-			process.env.OPENAI_API_KEY = undefined;
+			Reflect.deleteProperty(process.env, "OPENAI_API_KEY");
 		}
 	});
 
@@ -42,7 +42,7 @@ describe("getOpenAIKey", () => {
 	});
 
 	test("returns undefined when env var is not set", () => {
-		process.env.OPENAI_API_KEY = undefined;
+		Reflect.deleteProperty(process.env, "OPENAI_API_KEY");
 		expect(getOpenAIKey()).toBeUndefined();
 	});
 });
@@ -57,12 +57,12 @@ describe("detectCredentials", () => {
 		if (originalAnthKey !== undefined) {
 			process.env.ANTHROPIC_API_KEY = originalAnthKey;
 		} else {
-			process.env.ANTHROPIC_API_KEY = undefined;
+			Reflect.deleteProperty(process.env, "ANTHROPIC_API_KEY");
 		}
 		if (originalOaiKey !== undefined) {
 			process.env.OPENAI_API_KEY = originalOaiKey;
 		} else {
-			process.env.OPENAI_API_KEY = undefined;
+			Reflect.deleteProperty(process.env, "OPENAI_API_KEY");
 		}
 	});
 
@@ -84,8 +84,8 @@ describe("detectCredentials", () => {
 	});
 
 	test("reports null sources when nothing available", () => {
-		process.env.ANTHROPIC_API_KEY = undefined;
-		process.env.OPENAI_API_KEY = undefined;
+		Reflect.deleteProperty(process.env, "ANTHROPIC_API_KEY");
+		Reflect.deleteProperty(process.env, "OPENAI_API_KEY");
 		const report = detectCredentials();
 		// CLI detection depends on actual binaries — but source should not be "env"
 		if (!report.anthropic.available) {
